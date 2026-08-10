@@ -13,8 +13,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Flint | Technical Assessment Platform",
-  description: "Secure, scalable technical assessments.",
+  title: {
+    default: "Flint",
+    template: "%s · Flint",
+  },
+  description: "Secure, hierarchical exam and contest screening platform.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

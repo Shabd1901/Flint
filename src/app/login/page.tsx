@@ -1,42 +1,78 @@
+import Link from 'next/link'
 import { login } from './actions'
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  const resolvedParams = await searchParams;
-  const error = resolvedParams?.error;
+  const resolvedParams = await searchParams
+  const error = resolvedParams?.error
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 p-4">
-      <div className="w-full max-w-md p-8 space-y-8 bg-zinc-900/50 rounded-3xl border border-zinc-800 shadow-2xl backdrop-blur-xl relative overflow-hidden">
-        {/* Decorative background glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-blue-500/10 blur-[100px] pointer-events-none rounded-full" />
-        
-        <div className="text-center relative z-10">
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Welcome back</h1>
-          <p className="text-sm text-zinc-400">Sign in to your account</p>
-        </div>
+    <div className="min-h-screen bg-bg p-4 md:p-6">
+      <div className="mx-auto max-w-5xl">
+        <header className="mb-6 flex items-center justify-between">
+          <Link href="/" className="font-semibold tracking-tight">Flint</Link>
+          <Link href="/register" className="rounded-md border bg-white px-3 py-2 text-sm font-medium hover:bg-surface-soft">Create candidate account</Link>
+        </header>
 
-        {error && (
-          <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center relative z-10">
-            {error}
-          </div>
-        )}
+        <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+          <section className="surface-card p-6 md:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">Sign in</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Welcome back</h1>
+            <p className="mt-3 text-sm text-text-muted">Access your role-specific portal and continue your workflows.</p>
 
-        <form className="space-y-6 relative z-10">
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1.5">Email</label>
-            <input name="email" type="email" required className="block w-full px-4 py-3 bg-zinc-950/50 border border-zinc-800 rounded-xl text-white placeholder-zinc-500 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 outline-none transition-all" placeholder="you@example.com" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-300 mb-1.5">Password</label>
-            <input name="password" type="password" required className="block w-full px-4 py-3 bg-zinc-950/50 border border-zinc-800 rounded-xl text-white placeholder-zinc-500 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 outline-none transition-all" placeholder="••••••••" />
-          </div>
-          <button formAction={login} className="w-full flex justify-center py-3.5 px-4 rounded-xl shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-zinc-900 transition-all active:scale-[0.98]">
-            Sign in
-          </button>
-        </form>
-        
-        <div className="text-center text-sm text-zinc-400 relative z-10">
-          Don't have an account? <a href="/register" className="text-blue-500 hover:text-blue-400 font-medium transition-colors">Register as candidate</a>
+            <div className="mt-6 space-y-3">
+              <div className="surface-card bg-surface-soft p-3">
+                <p className="text-xs font-medium text-text-muted">Maintainer</p>
+                <p className="text-sm">Cross-org system visibility and interventions</p>
+              </div>
+              <div className="surface-card bg-surface-soft p-3">
+                <p className="text-xs font-medium text-text-muted">Admin</p>
+                <p className="text-sm">Manage exams, assignments, and candidate cohorts</p>
+              </div>
+              <div className="surface-card bg-surface-soft p-3">
+                <p className="text-xs font-medium text-text-muted">Candidate</p>
+                <p className="text-sm">Take tests, submit assignments, and view outcomes</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="surface-card p-6 md:p-8">
+            <h2 className="text-xl font-semibold tracking-tight">Account login</h2>
+            <p className="mt-1 text-sm text-text-muted">Use your registered credentials.</p>
+
+            {error && (
+              <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                {error}
+              </div>
+            )}
+
+            <form className="mt-5 space-y-4">
+              <label className="grid gap-1 text-sm">
+                <span>Email</span>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  className="h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2"
+                  placeholder="you@example.com"
+                />
+              </label>
+
+              <label className="grid gap-1 text-sm">
+                <span>Password</span>
+                <input
+                  name="password"
+                  type="password"
+                  required
+                  className="h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2"
+                  placeholder="••••••••"
+                />
+              </label>
+
+              <button formAction={login} className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-accent-strong">
+                Sign in
+              </button>
+            </form>
+          </section>
         </div>
       </div>
     </div>
