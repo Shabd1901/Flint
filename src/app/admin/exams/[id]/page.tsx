@@ -6,6 +6,7 @@ export default async function ExamDetails({ params }: { params: { id: string } }
   
   const { data: exam } = await supabase.from('exams').select('*').eq('id', params.id).single()
   const { data: questions } = await supabase.from('questions').select('*').eq('exam_id', params.id).order('created_at', { ascending: true })
+  const { data: attempts } = await supabase.from('exam_attempts').select('*, profiles(name, email), violation_events(*)').eq('exam_id', params.id).order('started_at', { ascending: false })
 
   async function addQuestion(formData: FormData) {
     'use server'
@@ -115,6 +116,65 @@ export default async function ExamDetails({ params }: { params: { id: string } }
               Add Question
             </button>
           </form>
+        </div>
+      </div>
+
+      <div className="pt-8 border-t border-zinc-800 space-y-4">
+        <h2 className="text-xl font-bold text-white">Candidate Attempts & Proctoring Log</h2>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-zinc-950/50">
+              <tr>
+                <th className="px-6 py-4 font-medium text-zinc-400">Candidate</th>
+                <th className="px-6 py-4 font-medium text-zinc-400">Status & Score</th>
+                <th className="px-6 py-4 font-medium text-zinc-400">Time</th>
+                <th className="px-6 py-4 font-medium text-zinc-400">Integrity Violations</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-800">
+              {attempts?.map((attempt: any) => (
+                <tr key={attempt.id} className="hover:bg-zinc-800/50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-zinc-300">
+                    {attempt.profiles?.name}
+                    <div className="text-xs text-zinc-500 mt-0.5">{attempt.profiles?.email}</div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wider ${
+                      attempt.status === 'submitted' ? 'bg-green-500/10 text-green-400' :
+                      attempt.status === 'in_progress' ? 'bg-yellow-500/10 text-yellow-400' :
+                      'bg-zinc-800 text-zinc-400'
+                    }`}>
+                      {attempt.status}
+                    </span>
+                    {attempt.score !== null && <div className="mt-2 text-zinc-300 font-medium">Score: {attempt.score}</div>}
+                  </td>
+                  <td className="px-6 py-4 text-zinc-400 text-xs">
+                    <div>Started: {new Date(attempt.started_at).toLocaleString()}</div>
+                    {attempt.completed_at && <div>Finished: {new Date(attempt.completed_at).toLocaleString()}</div>}
+                  </td>
+                  <td className="px-6 py-4">
+                    {attempt.violation_events?.length > 0 ? (
+                      <div className="space-y-2">
+                        {attempt.violation_events.map((v: any) => (
+                          <div key={v.id} className="flex items-center gap-2 text-xs">
+                            <span className="px-2 py-0.5 bg-red-500/10 text-red-400 rounded-md font-medium uppercase">{v.type}</span>
+                            <span className="text-zinc-500">{new Date(v.occurred_at).toLocaleTimeString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-zinc-500 text-xs">No violations detected</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {(!attempts || attempts.length === 0) && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-zinc-500">No attempts yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

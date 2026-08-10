@@ -1,5 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { ProctoringWrapper } from './ProctoringWrapper'
+import { logViolation } from './actions'
 
 export default async function ExamTake({ params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -67,7 +69,9 @@ export default async function ExamTake({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-8">
+    <div className="p-8 max-w-4xl mx-auto space-y-8 relative">
+      <ProctoringWrapper attemptId={attempt.id} logAction={logViolation} />
+
       <div className="flex justify-between items-center bg-zinc-900 border border-zinc-800 p-6 rounded-2xl sticky top-4 z-10 shadow-2xl">
         <h1 className="text-xl font-bold text-white">Exam In Progress</h1>
         <form action={submitExam}>

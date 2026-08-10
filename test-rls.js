@@ -15,7 +15,7 @@ async function setupUser(email, password, role, name) {
     password,
     email_confirm: true
   });
-  
+
   if (error) {
     if (error.code === 'email_exists' || error.message.includes('already')) {
        const { data: usersData } = await adminClient.auth.admin.listUsers();
@@ -31,14 +31,14 @@ async function setupUser(email, password, role, name) {
     .from('profiles')
     .upsert({ id: user.id, role, name, email })
     .select();
-    
+
   if (profileError) throw profileError;
   return user;
 }
 
 async function runTests() {
   console.log('--- Starting RLS Tests ---');
-  
+
   try {
     // 1. Setup Data
     console.log('Setting up test users...');
@@ -78,7 +78,7 @@ async function runTests() {
 
     console.log('\n--- Running Assertions ---');
     let allPassed = true;
-    
+
     // --- Maintainer Tests ---
     const mClient = await createAuthenticatedClient('m1@test.com', 'password123');
     const { data: mOrgs, error: mErr } = await mClient.from('orgs').select('*');
@@ -109,7 +109,7 @@ async function runTests() {
     if (c1Err2) console.error('Candidate1 exams error:', c1Err2);
     if (c1Exams && c1Exams.length === 1 && c1Exams[0].title === 'Exam1') console.log('✅ Candidate1 can only read enrolled Exam1');
     else { console.error('❌ Candidate1 exam isolation failed', c1Exams); allPassed = false; }
-    
+
     if (allPassed) {
        console.log('\n🎉 All RLS isolation tests passed successfully!');
     } else {
