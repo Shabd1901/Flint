@@ -181,9 +181,23 @@ ALTER TABLE contest_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE code_submissions ENABLE ROW LEVEL SECURITY;
 
 -- Helper functions for RLS
-CREATE OR REPLACE FUNCTION get_user_role() RETURNS user_role AS $$
+CREATE OR REPLACE FUNCTION get_user_role() RETURNS user_role
+LANGUAGE sql SECURITY DEFINER SET search_path = public
+AS $$
   SELECT role FROM profiles WHERE id = auth.uid() LIMIT 1;
-$$ LANGUAGE sql SECURITY DEFINER;
+$$;
+
+CREATE OR REPLACE FUNCTION is_org_admin(check_org_id UUID) RETURNS BOOLEAN
+LANGUAGE sql SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT EXISTS (SELECT 1 FROM orgs WHERE id = check_org_id AND admin_id = auth.uid());
+$$;
+
+CREATE OR REPLACE FUNCTION is_enrolled(check_org_id UUID) RETURNS BOOLEAN
+LANGUAGE sql SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT EXISTS (SELECT 1 FROM enrollments WHERE org_id = check_org_id AND candidate_id = auth.uid());
+$$;
 
 -- RLS Policies
 
@@ -192,9 +206,9 @@ DO $$
 DECLARE
     t_name text;
 BEGIN
-    FOR t_name IN 
-        SELECT tablename 
-        FROM pg_tables 
+    FOR t_name IN
+        SELECT tablename
+        FROM pg_tables
         WHERE schemaname = 'public' AND tablename NOT IN ('pg_stat_statements', 'pg_stat_statements_info')
     LOOP
         EXECUTE format('CREATE POLICY "Maintainer full access %I" ON %I FOR ALL USING (get_user_role() = ''maintainer'');', t_name, t_name);
@@ -203,247 +217,127 @@ END
 $$;
 
 -- profiles
-CREATE POLICY "Users access own profile" ON profiles
-    FOR ALL USING (id = auth.uid());
+CREATE POLICY "Users access own profile" ON profiles FOR ALL USING (id = auth.uid());
 
 -- orgs
-CREATE POLICY "Admin access own orgs" ON orgs
-    FOR ALL USING (admin_id = auth.uid());
-CREATE POLICY "Candidate read orgs" ON orgs
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM enrollments
-            WHERE enrollments.org_id = orgs.id
-            AND enrollments.candidate_id = auth.uid()
-        )
-    );
+CREATE POLICY "Admin access own orgs" ON orgs FOR ALL USING (admin_id = auth.uid());
+CREATE POLICY "Candidate read orgs" ON orgs FOR SELECT USING (is_enrolled(id));
 
 -- enrollments
-CREATE POLICY "Admin access enrollments" ON enrollments
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM orgs
-            WHERE orgs.id = enrollments.org_id
-            AND orgs.admin_id = auth.uid()
-        )
-    );
-CREATE POLICY "Candidate access own enrollments" ON enrollments
-    FOR SELECT USING (candidate_id = auth.uid());
+CREATE POLICY "Admin access enrollments" ON enrollments FOR ALL USING (is_org_admin(org_id));
+CREATE POLICY "Candidate access own enrollments" ON enrollments FOR SELECT USING (candidate_id = auth.uid());
 
 -- exams
-CREATE POLICY "Admin access exams" ON exams
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM orgs
-            WHERE orgs.id = exams.org_id
-            AND orgs.admin_id = auth.uid()
-        )
-    );
-CREATE POLICY "Candidate read exams" ON exams
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM enrollments
-            WHERE enrollments.org_id = exams.org_id
-            AND enrollments.candidate_id = auth.uid()
-        )
-        AND status != 'draft'
-    );
+CREATE POLICY "Admin access exams" ON exams FOR ALL USING (is_org_admin(org_id));
+CREATE POLICY "Candidate read exams" ON exams FOR SELECT USING (is_enrolled(org_id) AND status != 'draft');
 
 -- questions
-CREATE POLICY "Admin access questions" ON questions
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM exams
-            JOIN orgs ON orgs.id = exams.org_id
-            WHERE exams.id = questions.exam_id
-            AND orgs.admin_id = auth.uid()
-        )
-    );
-CREATE POLICY "Candidate read questions" ON questions
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM exam_attempts
-            WHERE exam_attempts.exam_id = questions.exam_id
-            AND exam_attempts.candidate_id = auth.uid()
-            AND exam_attempts.status != 'submitted'
-        )
-    );
+CREATE POLICY "Admin access questions" ON questions FOR ALL USING (
+    EXISTS (SELECT 1 FROM exams WHERE exams.id = exam_id AND is_org_admin(exams.org_id))
+);
+CREATE POLICY "Candidate read questions" ON questions FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM exam_attempts
+        WHERE exam_attempts.exam_id = questions.exam_id
+        AND exam_attempts.candidate_id = auth.uid()
+        AND exam_attempts.status != 'submitted'
+    )
+);
 
 -- exam_attempts
-CREATE POLICY "Admin read exam_attempts" ON exam_attempts
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM exams
-            JOIN orgs ON orgs.id = exams.org_id
-            WHERE exams.id = exam_attempts.exam_id
-            AND orgs.admin_id = auth.uid()
-        )
-    );
-CREATE POLICY "Candidate access own exam_attempts" ON exam_attempts
-    FOR ALL USING (candidate_id = auth.uid());
+CREATE POLICY "Admin read exam_attempts" ON exam_attempts FOR SELECT USING (
+    EXISTS (SELECT 1 FROM exams WHERE exams.id = exam_id AND is_org_admin(exams.org_id))
+);
+CREATE POLICY "Candidate access own exam_attempts" ON exam_attempts FOR ALL USING (candidate_id = auth.uid());
 
 -- exam_answers
-CREATE POLICY "Admin read exam_answers" ON exam_answers
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM exam_attempts
-            JOIN exams ON exams.id = exam_attempts.exam_id
-            JOIN orgs ON orgs.id = exams.org_id
-            WHERE exam_attempts.id = exam_answers.attempt_id
-            AND orgs.admin_id = auth.uid()
-        )
-    );
-CREATE POLICY "Candidate access own exam_answers" ON exam_answers
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM exam_attempts
-            WHERE exam_attempts.id = exam_answers.attempt_id
-            AND exam_attempts.candidate_id = auth.uid()
-        )
-    );
+CREATE POLICY "Admin read exam_answers" ON exam_answers FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM exam_attempts
+        JOIN exams ON exams.id = exam_attempts.exam_id
+        WHERE exam_attempts.id = attempt_id
+        AND is_org_admin(exams.org_id)
+    )
+);
+CREATE POLICY "Candidate access own exam_answers" ON exam_answers FOR ALL USING (
+    EXISTS (SELECT 1 FROM exam_attempts WHERE exam_attempts.id = attempt_id AND exam_attempts.candidate_id = auth.uid())
+);
 
 -- violation_events
-CREATE POLICY "Admin read violation_events" ON violation_events
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM exam_attempts
-            JOIN exams ON exams.id = exam_attempts.exam_id
-            JOIN orgs ON orgs.id = exams.org_id
-            WHERE exam_attempts.id = violation_events.attempt_id
-            AND orgs.admin_id = auth.uid()
-        )
-    );
-CREATE POLICY "Candidate insert violation_events" ON violation_events
-    FOR INSERT WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM exam_attempts
-            WHERE exam_attempts.id = violation_events.attempt_id
-            AND exam_attempts.candidate_id = auth.uid()
-        )
-    );
+CREATE POLICY "Admin read violation_events" ON violation_events FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM exam_attempts
+        JOIN exams ON exams.id = exam_attempts.exam_id
+        WHERE exam_attempts.id = attempt_id
+        AND is_org_admin(exams.org_id)
+    )
+);
+CREATE POLICY "Candidate insert violation_events" ON violation_events FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM exam_attempts WHERE exam_attempts.id = attempt_id AND exam_attempts.candidate_id = auth.uid())
+);
 
 -- assignments
-CREATE POLICY "Admin access assignments" ON assignments
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM orgs
-            WHERE orgs.id = assignments.org_id
-            AND orgs.admin_id = auth.uid()
-        )
-    );
-CREATE POLICY "Candidate read assignments" ON assignments
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM enrollments
-            WHERE enrollments.org_id = assignments.org_id
-            AND enrollments.candidate_id = auth.uid()
-        )
-    );
+CREATE POLICY "Admin access assignments" ON assignments FOR ALL USING (is_org_admin(org_id));
+CREATE POLICY "Candidate read assignments" ON assignments FOR SELECT USING (is_enrolled(org_id));
 
 -- assignment_submissions
-CREATE POLICY "Admin access assignment_submissions" ON assignment_submissions
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM assignments
-            JOIN orgs ON orgs.id = assignments.org_id
-            WHERE assignments.id = assignment_submissions.assignment_id
-            AND orgs.admin_id = auth.uid()
-        )
-    );
-CREATE POLICY "Candidate access own assignment_submissions" ON assignment_submissions
-    FOR ALL USING (candidate_id = auth.uid());
+CREATE POLICY "Admin access assignment_submissions" ON assignment_submissions FOR ALL USING (
+    EXISTS (SELECT 1 FROM assignments WHERE assignments.id = assignment_id AND is_org_admin(assignments.org_id))
+);
+CREATE POLICY "Candidate access own assignment_submissions" ON assignment_submissions FOR ALL USING (candidate_id = auth.uid());
 
 -- contests
-CREATE POLICY "Admin access contests" ON contests
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM orgs
-            WHERE orgs.id = contests.org_id
-            AND orgs.admin_id = auth.uid()
-        )
-    );
-CREATE POLICY "Candidate read contests" ON contests
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM enrollments
-            WHERE enrollments.org_id = contests.org_id
-            AND enrollments.candidate_id = auth.uid()
-        )
-        AND status != 'draft'
-    );
+CREATE POLICY "Admin access contests" ON contests FOR ALL USING (is_org_admin(org_id));
+CREATE POLICY "Candidate read contests" ON contests FOR SELECT USING (is_enrolled(org_id) AND status != 'draft');
 
 -- problems
-CREATE POLICY "Admin access problems" ON problems
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM contests
-            JOIN orgs ON orgs.id = contests.org_id
-            WHERE contests.id = problems.contest_id
-            AND orgs.admin_id = auth.uid()
-        )
-    );
-CREATE POLICY "Candidate read problems" ON problems
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM contest_attempts
-            WHERE contest_attempts.contest_id = problems.contest_id
-            AND contest_attempts.candidate_id = auth.uid()
-            AND contest_attempts.status != 'submitted'
-        )
-    );
+CREATE POLICY "Admin access problems" ON problems FOR ALL USING (
+    EXISTS (SELECT 1 FROM contests WHERE contests.id = contest_id AND is_org_admin(contests.org_id))
+);
+CREATE POLICY "Candidate read problems" ON problems FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM contest_attempts
+        WHERE contest_attempts.contest_id = problems.contest_id
+        AND contest_attempts.candidate_id = auth.uid()
+        AND contest_attempts.status != 'submitted'
+    )
+);
 
 -- test_cases
-CREATE POLICY "Admin access test_cases" ON test_cases
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM problems
-            JOIN contests ON contests.id = problems.contest_id
-            JOIN orgs ON orgs.id = contests.org_id
-            WHERE problems.id = test_cases.problem_id
-            AND orgs.admin_id = auth.uid()
-        )
-    );
-CREATE POLICY "Candidate read sample test_cases" ON test_cases
-    FOR SELECT USING (
-        is_sample = true AND
-        EXISTS (
-            SELECT 1 FROM problems
-            JOIN contest_attempts ON contest_attempts.contest_id = problems.contest_id
-            WHERE problems.id = test_cases.problem_id
-            AND contest_attempts.candidate_id = auth.uid()
-            AND contest_attempts.status != 'submitted'
-        )
-    );
+CREATE POLICY "Admin access test_cases" ON test_cases FOR ALL USING (
+    EXISTS (
+        SELECT 1 FROM problems
+        JOIN contests ON contests.id = problems.contest_id
+        WHERE problems.id = problem_id
+        AND is_org_admin(contests.org_id)
+    )
+);
+CREATE POLICY "Candidate read sample test_cases" ON test_cases FOR SELECT USING (
+    is_sample = true AND
+    EXISTS (
+        SELECT 1 FROM problems
+        JOIN contest_attempts ON contest_attempts.contest_id = problems.contest_id
+        WHERE problems.id = problem_id
+        AND contest_attempts.candidate_id = auth.uid()
+        AND contest_attempts.status != 'submitted'
+    )
+);
 
 -- contest_attempts
-CREATE POLICY "Admin read contest_attempts" ON contest_attempts
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM contests
-            JOIN orgs ON orgs.id = contests.org_id
-            WHERE contests.id = contest_attempts.contest_id
-            AND orgs.admin_id = auth.uid()
-        )
-    );
-CREATE POLICY "Candidate access own contest_attempts" ON contest_attempts
-    FOR ALL USING (candidate_id = auth.uid());
+CREATE POLICY "Admin read contest_attempts" ON contest_attempts FOR SELECT USING (
+    EXISTS (SELECT 1 FROM contests WHERE contests.id = contest_id AND is_org_admin(contests.org_id))
+);
+CREATE POLICY "Candidate access own contest_attempts" ON contest_attempts FOR ALL USING (candidate_id = auth.uid());
 
 -- code_submissions
-CREATE POLICY "Admin read code_submissions" ON code_submissions
-    FOR SELECT USING (
-        EXISTS (
-            SELECT 1 FROM contest_attempts
-            JOIN contests ON contests.id = contest_attempts.contest_id
-            JOIN orgs ON orgs.id = contests.org_id
-            WHERE contest_attempts.id = code_submissions.contest_attempts_id
-            AND orgs.admin_id = auth.uid()
-        )
-    );
-CREATE POLICY "Candidate access own code_submissions" ON code_submissions
-    FOR ALL USING (
-        EXISTS (
-            SELECT 1 FROM contest_attempts
-            WHERE contest_attempts.id = code_submissions.contest_attempts_id
-            AND contest_attempts.candidate_id = auth.uid()
-        )
-    );
+CREATE POLICY "Admin read code_submissions" ON code_submissions FOR SELECT USING (
+    EXISTS (
+        SELECT 1 FROM contest_attempts
+        JOIN contests ON contests.id = contest_attempts.contest_id
+        WHERE contest_attempts.id = contest_attempts_id
+        AND is_org_admin(contests.org_id)
+    )
+);
+CREATE POLICY "Candidate access own code_submissions" ON code_submissions FOR ALL USING (
+    EXISTS (SELECT 1 FROM contest_attempts WHERE contest_attempts.id = contest_attempts_id AND contest_attempts.candidate_id = auth.uid())
+);
