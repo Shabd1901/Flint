@@ -41,8 +41,8 @@ export function Sidebar({ title, role, navItems, handleSignOut }: { title: strin
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-zinc-950/80 backdrop-blur-xl border-r border-zinc-800 p-6 flex flex-col gap-8 transition-transform duration-300 ease-in-out
-        md:relative md:translate-x-0 md:w-64 md:bg-zinc-900/50
+        fixed inset-y-0 left-0 z-50 w-72 bg-zinc-950 border-r border-zinc-800 p-6 flex flex-col gap-6 transition-transform duration-300 ease-in-out
+        md:relative md:translate-x-0 md:w-64 md:bg-zinc-900/50 md:shrink-0 md:flex-shrink-0
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="hidden md:block">

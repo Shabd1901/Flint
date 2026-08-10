@@ -1,6 +1,9 @@
 import { login } from './actions'
 
-export default function LoginPage({ searchParams }: { searchParams: { error?: string } }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+  const resolvedParams = await searchParams;
+  const error = resolvedParams?.error;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 p-4">
       <div className="w-full max-w-md p-8 space-y-8 bg-zinc-900/50 rounded-3xl border border-zinc-800 shadow-2xl backdrop-blur-xl relative overflow-hidden">
@@ -12,9 +15,9 @@ export default function LoginPage({ searchParams }: { searchParams: { error?: st
           <p className="text-sm text-zinc-400">Sign in to your account</p>
         </div>
 
-        {searchParams?.error && (
+        {error && (
           <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center relative z-10">
-            {searchParams.error}
+            {error}
           </div>
         )}
 
