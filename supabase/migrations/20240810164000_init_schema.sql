@@ -341,3 +341,8 @@ CREATE POLICY "Admin read code_submissions" ON code_submissions FOR SELECT USING
 CREATE POLICY "Candidate access own code_submissions" ON code_submissions FOR ALL USING (
     EXISTS (SELECT 1 FROM contest_attempts WHERE contest_attempts.id = contest_attempts_id AND contest_attempts.candidate_id = auth.uid())
 );
+
+-- Default Grants (restoring permissions if schema was recreated manually)
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL PRIVILEGES ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
