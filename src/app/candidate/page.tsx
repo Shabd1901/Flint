@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 
 export default async function CandidateDashboard() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
@@ -18,7 +18,7 @@ export default async function CandidateDashboard() {
           </div>
           <form action={async () => {
             'use server'
-            const s = createClient(); await s.auth.signOut(); redirect('/login')
+            const s = await createClient(); await s.auth.signOut(); redirect('/login')
           }}>
             <button className="px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg hover:bg-zinc-800 transition-colors">Sign Out</button>
           </form>
