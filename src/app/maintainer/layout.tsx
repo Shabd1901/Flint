@@ -4,7 +4,9 @@ import { MaintainerSidebar } from '@/components/MaintainerSidebar'
 
 export default async function MaintainerLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   async function handleSignOut() {
@@ -15,11 +17,9 @@ export default async function MaintainerLayout({ children }: { children: React.R
   }
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-zinc-950 text-white">
+    <div className="min-h-screen bg-bg text-text md:flex">
       <MaintainerSidebar signOutAction={handleSignOut} />
-      <main className="flex-1 overflow-auto bg-zinc-950">
-        {children}
-      </main>
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   )
 }

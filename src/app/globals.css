@@ -1,26 +1,108 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f5f7fb;
+  --surface: #ffffff;
+  --surface-soft: #f0f3f8;
+  --line: #dbe3ee;
+
+  --text: #101827;
+  --text-muted: #516074;
+
+  --accent: #e4572e;
+  --accent-strong: #c8421b;
+  --success: #1f9d63;
+  --warning: #b7791f;
+  --danger: #c53030;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
+  --color-line: var(--line);
+
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--line);
+}
+
+html,
+body {
+  min-height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-geist-sans), Inter, system-ui, sans-serif;
+}
+
+.container-page {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1120px;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 768px) {
+  .container-page {
+    padding-inline: 1.5rem;
+  }
+}
+
+.surface-card {
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.hover-lift {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(16, 24, 39, 0.08);
+}
+
+.live-dot {
+  position: relative;
+  display: inline-flex;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--success);
+}
+
+.live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(31, 157, 99, 0.4);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.3);
+    opacity: 0;
+  }
 }
