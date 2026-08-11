@@ -10,7 +10,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <div className="min-h-screen bg-bg p-4 md:p-6">
       <div className="mx-auto max-w-5xl">
         <header className="mb-6 flex items-center justify-between">
-          <Link href="/" className="font-semibold tracking-tight">Flint</Link>
+          <Link href="/" className="rounded-md bg-accent px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-accent-strong">Back to Home</Link>
           <Link href="/register" className="rounded-md border bg-white px-3 py-2 text-sm font-medium hover:bg-surface-soft">Create candidate account</Link>
         </header>
 

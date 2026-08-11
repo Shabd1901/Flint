@@ -13,10 +13,16 @@ export function ProctoringWrapper({
 }) {
   const hasLoggedDevtools = useRef(false)
   const lastLogTime = useRef<Record<string, number>>({})
-  const sessionToken = useRef<string>(Math.random().toString(36).substring(2) + Date.now().toString(36))
   const [sessionLocked, setSessionLocked] = useState(false)
 
   useEffect(() => {
+    const storageKey = `flint_session_${attemptId}`
+    let token = sessionStorage.getItem(storageKey)
+    if (!token) {
+      token = Math.random().toString(36).substring(2) + Date.now().toString(36)
+      sessionStorage.setItem(storageKey, token)
+    }
+
     const rateLimitedLog = (type: string, meta?: any) => {
       const now = Date.now()
       const lastTime = lastLogTime.current[type] || 0
@@ -28,7 +34,7 @@ export function ProctoringWrapper({
     // Heartbeat check every 10s
     const runHeartbeat = async () => {
       try {
-        const res = await heartbeatAction(attemptId, sessionToken.current)
+        const res = await heartbeatAction(attemptId, token!)
         if (!res.valid) {
           setSessionLocked(true)
         }
