@@ -17,7 +17,7 @@ export default async function CandidateLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="min-h-screen bg-bg text-text md:flex">
+    <div className="h-[100dvh] bg-bg text-text md:flex overflow-hidden">
       <CandidateSidebar signOutAction={handleSignOut} />
       <main className="flex-1 overflow-auto">{children}</main>
     </div>

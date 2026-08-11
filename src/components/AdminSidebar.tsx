@@ -8,7 +8,7 @@ export function AdminSidebar({ signOutAction }: { signOutAction: () => Promise<v
       title="Flint" 
       role="Admin"
       navItems={[
-        { label: 'Overview', href: '/admin', icon: LayoutDashboard },
+        { label: 'Overview', href: '/admin', icon: LayoutDashboard, exact: true },
         { label: 'Exams', href: '/admin/exams', icon: FileText },
         { label: 'Assignments', href: '/admin/assignments', icon: CheckSquare },
         { label: 'Coding Contests', href: '/admin/contests', icon: Code2 },

@@ -9,6 +9,7 @@ export interface NavItem {
   label: string
   href: string
   icon: LucideIcon
+  exact?: boolean
 }
 
 export function Sidebar({
@@ -56,7 +57,9 @@ export function Sidebar({
         <nav className="mt-6 space-y-1.5">
           {navItems.map((item) => {
             const Icon = item.icon
-            const isActive = pathname === item.href || (pathname.startsWith(item.href + '/') && item.href !== '/')
+            const isActive = item.exact 
+              ? pathname === item.href 
+              : pathname === item.href || (pathname.startsWith(item.href + '/') && item.href !== '/')
             return (
               <Link
                 key={item.href}

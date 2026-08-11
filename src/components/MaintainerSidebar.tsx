@@ -8,7 +8,7 @@ export function MaintainerSidebar({ signOutAction }: { signOutAction: () => Prom
       title="Flint"
       role="Maintainer"
       navItems={[
-        { label: 'Global Dashboard', href: '/maintainer', icon: LayoutDashboard },
+        { label: 'Global Dashboard', href: '/maintainer', icon: LayoutDashboard, exact: true },
       ]}
       handleSignOut={signOutAction}
     />
