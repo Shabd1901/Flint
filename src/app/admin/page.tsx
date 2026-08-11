@@ -2,28 +2,22 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
+import { IntegrityFeed } from './IntegrityFeed'
+import { Activity, Users, ShieldCheck, CheckCircle2 } from 'lucide-react'
 
 export default async function AdminDashboard() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('name, email')
-    .eq('id', user.id)
-    .single()
-
-  // Fetch admin's org
+  const { data: profile } = await supabase.from('profiles').select('name, email').eq('id', user.id).single()
   const { data: org } = await supabase.from('orgs').select('id, name, invite_code').eq('admin_id', user.id).single()
 
-  // Fetch real stats if org exists
   let examCount = 0
   let candidateCount = 0
-  let violationCount = 0
+  let activeSessionsCount = 0
   let reviewQueue: any[] = []
+  let recentEvents: any[] = []
 
   if (org) {
     const { count: ec } = await supabase.from('exams').select('id', { count: 'exact', head: true }).eq('org_id', org.id)
@@ -32,11 +26,12 @@ export default async function AdminDashboard() {
     const { count: cc } = await supabase.from('enrollments').select('id', { count: 'exact', head: true }).eq('org_id', org.id)
     candidateCount = cc || 0
 
-    // Recent violations for this org's exams
-    const { data: orgExams } = await supabase.from('exams').select('id').eq('org_id', org.id)
+    const { data: orgExams } = await supabase.from('exams').select('id, title').eq('org_id', org.id)
+    const examMap = new Map(orgExams?.map(e => [e.id, e.title]) || [])
     const examIds = orgExams?.map(e => e.id) || []
     
     if (examIds.length > 0) {
+      // 1. Fetch High-Score + High-Violation Queue
       const { data: attempts } = await supabase
         .from('exam_attempts')
         .select('id, score, violation_score, status, profiles(name)')
@@ -53,21 +48,41 @@ export default async function AdminDashboard() {
           status: (a.violation_score || 0) >= 5 ? 'Review' : 'Clear'
         }))
 
-      // Count violations in last hour
-      const oneHourAgo = new Date(Date.now() - 3600000).toISOString()
-      const { data: recentAttempts } = await supabase
+      // 2. Fetch Active Sessions (in_progress with recent heartbeat)
+      const fifteenSecsAgo = new Date(Date.now() - 15000).toISOString()
+      const { count: activeCount } = await supabase
         .from('exam_attempts')
-        .select('id')
+        .select('id', { count: 'exact', head: true })
         .in('exam_id', examIds)
+        .eq('status', 'in_progress')
+        .gte('last_heartbeat', fifteenSecsAgo)
+      activeSessionsCount = activeCount || 0
 
-      if (recentAttempts && recentAttempts.length > 0) {
-        const attemptIds = recentAttempts.map(a => a.id)
-        const { count: vc } = await supabase
-          .from('violation_events')
-          .select('id', { count: 'exact', head: true })
-          .in('attempt_id', attemptIds)
-          .gte('occurred_at', oneHourAgo)
-        violationCount = vc || 0
+      // 3. Fetch Integrity Feed (Recent Events)
+      const { data: events } = await supabase
+        .from('violation_events')
+        .select('id, type, occurred_at, attempt_id')
+        .order('occurred_at', { ascending: false })
+        .limit(20)
+
+      // Get candidate names for these events
+      if (events && events.length > 0) {
+        const attemptIds = events.map(e => e.attempt_id)
+        const { data: attemptDetails } = await supabase
+          .from('exam_attempts')
+          .select('id, exam_id, profiles(name)')
+          .in('id', attemptIds)
+        
+        const detailsMap = new Map(attemptDetails?.map(a => [a.id, a]) || [])
+        
+        recentEvents = events.map(e => {
+          const detail = detailsMap.get(e.attempt_id) as any
+          return {
+            ...e,
+            candidate_name: detail?.profiles?.name || 'Unknown',
+            exam_title: examMap.get(detail?.exam_id) || 'Unknown Exam'
+          }
+        })
       }
     }
   }
@@ -76,114 +91,154 @@ export default async function AdminDashboard() {
     'use server'
     const s = await createClient()
     const { data: { user } } = await s.auth.getUser()
-    
-    await s.from('orgs').insert({
-      admin_id: user!.id,
-      name: formData.get('org_name'),
-    })
+    await s.from('orgs').insert({ admin_id: user!.id, name: formData.get('org_name') })
     revalidatePath('/admin')
   }
 
   return (
-    <div className="container-page py-6 md:py-8">
-      <header className="mb-6 surface-card p-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">Admin dashboard</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">Welcome, {profile?.name || 'Admin'}</h1>
-        <p className="mt-1 text-sm text-text-muted">Manage exams, assignments, and integrity review queues.</p>
+    <div className="container-page py-6 md:py-8 max-w-7xl">
+      <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-accent">Overview Dashboard</p>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight">Mission Control</h1>
+          <p className="mt-2 text-sm text-text-muted max-w-xl">
+            Monitor active sessions, review high-risk candidates, and manage your organization's assessments.
+          </p>
+        </div>
+        
+        {org && (
+          <div className="flex items-center gap-4 bg-white border shadow-sm px-4 py-2 rounded-lg">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span className="text-sm font-medium">Server Health: Optimal</span>
+            </div>
+            <div className="w-px h-4 bg-line"></div>
+            <div className="text-sm">
+              <span className="text-text-muted mr-2">Org Code:</span>
+              <code className="bg-surface-soft px-2 py-0.5 rounded font-mono font-semibold">{org.invite_code}</code>
+            </div>
+          </div>
+        )}
       </header>
 
       {!org ? (
-        <section className="surface-card p-6">
-          <h2 className="text-lg font-semibold">Create Your Organization</h2>
-          <p className="text-sm text-text-muted mt-1">You need an organization before creating exams or assignments.</p>
-          <form action={createOrg} className="mt-4 flex gap-3 items-end">
-            <label className="grid gap-1 text-sm flex-1">
-              <span className="text-text-muted">Organization Name</span>
-              <input name="org_name" required className="h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" placeholder="e.g. CS101 - Fall 2026" />
-            </label>
-            <button className="h-10 rounded-md bg-accent px-6 text-sm font-semibold text-white hover:bg-accent-strong transition">Create</button>
+        <section className="surface-card p-8 border-dashed border-2 text-center max-w-xl mx-auto mt-12">
+          <ShieldCheck className="w-12 h-12 text-accent mx-auto mb-4 opacity-80" />
+          <h2 className="text-xl font-semibold">Create Your Organization</h2>
+          <p className="text-sm text-text-muted mt-2 mb-6">Initialize your tenant to start creating exams, inviting candidates, and monitoring integrity.</p>
+          <form action={createOrg} className="flex flex-col gap-3">
+            <input name="org_name" required className="h-11 rounded-md border bg-white px-4 outline-none ring-accent focus:ring-2 w-full text-center" placeholder="e.g. Acme Corp Hiring" />
+            <button className="h-11 rounded-md bg-accent px-6 font-semibold text-white hover:bg-accent-strong transition shadow-sm hover:-translate-y-0.5">Initialize Tenant</button>
           </form>
         </section>
       ) : (
-        <>
-          <section className="mb-4 surface-card p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-text-muted">Organization</p>
-                <p className="font-semibold">{org.name}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-text-muted">Invite Code</p>
-                <code className="rounded bg-surface-soft px-3 py-1 text-sm font-mono font-semibold">{org.invite_code}</code>
-              </div>
-            </div>
-          </section>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-start">
+          
+          <div className="space-y-6">
+            {/* Live Metrics Grid */}
+            <section className="grid gap-4 sm:grid-cols-3">
+              <article className="surface-card p-5 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Users className="w-12 h-12" />
+                </div>
+                <p className="text-sm font-medium text-text-muted">Total Candidates</p>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <p className="font-mono text-4xl font-semibold tracking-tight">{candidateCount}</p>
+                </div>
+              </article>
+              
+              <article className="surface-card p-5 relative overflow-hidden group border-accent/20 bg-accent/5">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-accent">
+                  <Activity className="w-12 h-12" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+                  </span>
+                  <p className="text-sm font-medium text-text-muted">Active Sessions</p>
+                </div>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <p className="font-mono text-4xl font-semibold tracking-tight text-accent">{activeSessionsCount}</p>
+                </div>
+              </article>
+              
+              <article className="surface-card p-5 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <ShieldCheck className="w-12 h-12" />
+                </div>
+                <p className="text-sm font-medium text-text-muted">Active Exams</p>
+                <div className="mt-2 flex items-baseline gap-2">
+                  <p className="font-mono text-4xl font-semibold tracking-tight">{examCount}</p>
+                </div>
+              </article>
+            </section>
 
-          <section className="grid gap-4 md:grid-cols-3">
-            <article className="surface-card hover-lift p-5">
-              <p className="text-sm text-text-muted">Active exams</p>
-              <p className="mt-2 font-mono text-3xl font-semibold">{examCount}</p>
-            </article>
-            <article className="surface-card hover-lift p-5">
-              <p className="text-sm text-text-muted">Enrolled candidates</p>
-              <p className="mt-2 font-mono text-3xl font-semibold">{candidateCount}</p>
-            </article>
-            <article className="surface-card hover-lift p-5">
-              <p className="text-sm text-text-muted">Flagged events (1h)</p>
-              <p className="mt-2 font-mono text-3xl font-semibold text-warning">{violationCount}</p>
-            </article>
-          </section>
-
-          <section className="mt-4 surface-card p-5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold">Quick actions</h2>
-              <div className="flex gap-2">
-                <Link href="/admin/exams" className="rounded-md border bg-white px-3 py-2 text-sm font-medium hover:bg-surface-soft">Create exam</Link>
-                <Link href="/admin/assignments" className="rounded-md border bg-white px-3 py-2 text-sm font-medium hover:bg-surface-soft">Create assignment</Link>
-                <button disabled className="rounded-md bg-surface-soft px-3 py-2 text-sm font-medium text-text-muted cursor-not-allowed" title="Coming in Phase 2">Export shortlist</button>
+            {/* Candidate Review Queue */}
+            <section className="surface-card overflow-hidden">
+              <div className="p-5 border-b bg-surface-soft/30 flex justify-between items-center">
+                <div>
+                  <h2 className="text-base font-semibold">Priority Review Queue</h2>
+                  <p className="text-xs text-text-muted mt-0.5">High-score candidates with integrity flags</p>
+                </div>
+                <Link href="/admin/exams" className="text-xs font-semibold text-accent hover:underline">View all exams</Link>
               </div>
-            </div>
-          </section>
-
-          <section className="mt-4 surface-card p-5">
-            <h2 className="text-lg font-semibold">High-score + high-violation review queue</h2>
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[620px] text-left text-sm">
-                <thead>
-                  <tr className="border-b text-text-muted">
-                    <th className="py-2">Candidate</th>
-                    <th className="py-2">Score</th>
-                    <th className="py-2">Violation score</th>
-                    <th className="py-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reviewQueue.map((item) => (
-                    <tr key={item.candidate} className="border-b hover:bg-surface-soft/70">
-                      <td className="py-2">{item.candidate}</td>
-                      <td className="py-2">{item.score}</td>
-                      <td className="py-2">{item.violation}</td>
-                      <td className="py-2">
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs ${
-                            item.status === 'Review' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[600px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b bg-surface-soft/50 text-text-muted text-xs uppercase tracking-wider">
+                      <th className="py-3 px-5 font-medium">Candidate</th>
+                      <th className="py-3 px-5 font-medium">Score</th>
+                      <th className="py-3 px-5 font-medium">Violation Index</th>
+                      <th className="py-3 px-5 font-medium">Status</th>
                     </tr>
-                  ))}
-                  {reviewQueue.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="py-6 text-center text-text-muted">No flagged candidates yet.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {reviewQueue.map((item, i) => (
+                      <tr key={i} className="hover:bg-surface-soft/70 transition-colors group">
+                        <td className="py-3 px-5 font-medium">{item.candidate}</td>
+                        <td className="py-3 px-5 font-mono">{item.score}</td>
+                        <td className="py-3 px-5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono">{item.violation}</span>
+                            {item.violation > 0 && (
+                              <div className="h-1.5 w-16 bg-surface-soft rounded-full overflow-hidden">
+                                <div className={`h-full ${item.violation >= 5 ? 'bg-rose-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, item.violation * 10)}%` }} />
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-5">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                              item.status === 'Review' ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                            }`}
+                          >
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {reviewQueue.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="py-12 text-center text-text-muted">
+                          <ShieldCheck className="w-8 h-8 mx-auto mb-3 opacity-20" />
+                          No candidates require review at this time.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          {/* Right Sidebar: Integrity Feed */}
+          <div className="h-[600px] sticky top-6">
+            <IntegrityFeed initialEvents={recentEvents} orgId={org.id} />
+          </div>
+
+        </div>
       )}
     </div>
   )
