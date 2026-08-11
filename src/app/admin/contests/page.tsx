@@ -1,0 +1,104 @@
+import { createClient } from '@/utils/supabase/server'
+import { revalidatePath } from 'next/cache'
+
+export default async function AdminContests() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: org } = await supabase.from('orgs').select('id').eq('admin_id', user!.id).single()
+  const { data: contests } = org 
+    ? await supabase.from('contests').select('*').eq('org_id', org.id).order('created_at', { ascending: false }) 
+    : { data: [] }
+
+  async function createContest(formData: FormData) {
+    'use server'
+    const s = await createClient()
+    const { data: { user } } = await s.auth.getUser()
+    const { data: o } = await s.from('orgs').select('id').eq('admin_id', user!.id).single()
+
+    await s.from('contests').insert({
+      org_id: o!.id,
+      title: formData.get('title'),
+      duration_minutes: Number(formData.get('duration_minutes')),
+      start_at: formData.get('start_at') || null,
+      end_at: formData.get('end_at') || null,
+      status: 'draft'
+    })
+
+    revalidatePath('/admin/contests')
+  }
+
+  if (!org) {
+    return <div className="container-page py-8 text-text-muted">Please create an organization first on the dashboard.</div>
+  }
+
+  return (
+    <div className="container-page py-6 md:py-8 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-semibold tracking-tight">Manage Coding Contests</h1>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          <h2 className="text-lg font-semibold text-text-muted">All Contests</h2>
+          {contests?.length === 0 ? (
+            <div className="p-8 border border-line border-dashed rounded-xl text-center text-text-muted">
+              No coding contests created yet.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {contests?.map((c: any) => (
+                <div key={c.id} className="surface-card hover-lift p-5">
+                  <div className="flex justify-between items-start mb-2">
+                    <a href={`/admin/contests/${c.id}/problems`} className="font-semibold text-lg text-accent hover:text-accent-strong hover:underline">{c.title}</a>
+                    <span className={`text-xs px-2.5 py-1 rounded-lg font-medium uppercase tracking-wider ${
+                      c.status === 'live' ? 'bg-emerald-100 text-emerald-700' :
+                      c.status === 'closed' ? 'bg-rose-100 text-rose-700' :
+                      'bg-surface-soft text-text-muted'
+                    }`}>
+                      {c.status}
+                    </span>
+                  </div>
+                  <div className="mt-4 text-xs text-text-muted flex gap-4">
+                    <span>Duration: {c.duration_minutes}m</span>
+                    <span>Starts: {c.start_at ? new Date(c.start_at).toLocaleString() : 'Anytime'}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <form action={createContest} className="surface-card p-5 space-y-4 sticky top-8">
+            <h2 className="text-lg font-semibold mb-4">Create Coding Contest</h2>
+            
+            <div>
+              <label className="block text-sm font-medium text-text-muted mb-1">Contest Title</label>
+              <input name="title" required className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" placeholder="e.g. Hackathon Screening Round 2" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-muted mb-1">Duration (mins)</label>
+              <input type="number" name="duration_minutes" required defaultValue="90" className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-muted mb-1">Start Window (Opt)</label>
+              <input type="datetime-local" name="start_at" className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-muted mb-1">End Window (Opt)</label>
+              <input type="datetime-local" name="end_at" className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" />
+            </div>
+
+            <button className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-accent-strong mt-4">
+              Create Draft Contest
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}

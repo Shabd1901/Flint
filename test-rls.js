@@ -1,3 +1,13 @@
+const fs = require('fs');
+if (!process.env.SUPABASE_URL && fs.existsSync('.env')) {
+  const envConfig = fs.readFileSync('.env', 'utf-8');
+  envConfig.split('\n').forEach(line => {
+    const [key, ...vals] = line.split('=');
+    if (key && vals.length > 0) {
+      process.env[key.trim()] = vals.join('=').trim().replace(/^"|"$/g, '');
+    }
+  });
+}
 global.WebSocket = require('ws');
 const { createClient } = require('@supabase/supabase-js');
 

@@ -36,5 +36,5 @@ export async function register(formData: FormData) {
     redirect(`/register?error=${encodeURIComponent('Error creating profile: ' + profileError.message)}`)
   }
 
-  redirect('/login?error=' + encodeURIComponent('Account created successfully! Please sign in.'))
+  redirect('/login?success=' + encodeURIComponent('Account created successfully! Please sign in.'))
 }

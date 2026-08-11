@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { login } from './actions'
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; success?: string }> }) {
   const resolvedParams = await searchParams
   const error = resolvedParams?.error
+  const success = resolvedParams?.success
 
   return (
     <div className="min-h-screen bg-bg p-4 md:p-6">
@@ -38,6 +39,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <section className="surface-card p-6 md:p-8">
             <h2 className="text-xl font-semibold tracking-tight">Account login</h2>
             <p className="mt-1 text-sm text-text-muted">Use your registered credentials.</p>
+
+            {success && (
+              <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+                {success}
+              </div>
+            )}
 
             {error && (
               <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">

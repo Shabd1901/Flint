@@ -1,5 +1,5 @@
 'use client'
-import { LayoutDashboard, Code, BookOpen } from 'lucide-react'
+import { LayoutDashboard, Code, BookOpen, Terminal } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 
 export function CandidateSidebar({ signOutAction }: { signOutAction: () => Promise<void> }) {
@@ -9,8 +9,9 @@ export function CandidateSidebar({ signOutAction }: { signOutAction: () => Promi
       role="Candidate"
       navItems={[
         { label: 'Dashboard', href: '/candidate', icon: LayoutDashboard },
-        { label: 'My Assignments', href: '/candidate/assignments', icon: Code },
         { label: 'My Exams', href: '/candidate/exams', icon: BookOpen },
+        { label: 'My Assignments', href: '/candidate/assignments', icon: Code },
+        { label: 'Coding Contests', href: '/candidate/contests', icon: Terminal },
       ]}
       handleSignOut={signOutAction}
     />
