@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { formatDateTime } from '@/utils/formatDate'
 
 export default async function AdminAssignments() {
   const supabase = await createClient()
@@ -51,7 +52,7 @@ export default async function AdminAssignments() {
                   </div>
                   <p className="text-text-muted text-sm line-clamp-2">{a.instructions}</p>
                   <div className="mt-4 text-xs text-text-muted flex items-center gap-4">
-                    <span>Due: {new Date(a.due_at).toLocaleString()}</span>
+                    <span suppressHydrationWarning>Due: {formatDateTime(a.due_at)}</span>
                   </div>
                 </div>
               ))}

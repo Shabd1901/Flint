@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { formatDate, formatDateTime } from '@/utils/formatDate'
 
 export default async function MaintainerDashboard() {
   const supabase = await createClient()
@@ -120,7 +121,7 @@ export default async function MaintainerDashboard() {
                   <td className="py-2 font-medium">{org.name}</td>
                   <td className="py-2 text-text-muted">{org.profiles?.name} ({org.profiles?.email})</td>
                   <td className="py-2"><code className="rounded bg-surface-soft px-2 py-0.5 text-xs font-mono">{org.invite_code}</code></td>
-                  <td className="py-2 text-text-muted">{new Date(org.created_at).toLocaleDateString()}</td>
+                  <td className="py-2 text-text-muted" suppressHydrationWarning>{formatDate(org.created_at)}</td>
                 </tr>
               ))}
               {(!orgs || orgs.length === 0) && (
@@ -153,7 +154,7 @@ export default async function MaintainerDashboard() {
                   <td className="py-2">
                     <span className="rounded bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700">{v.type}</span>
                   </td>
-                  <td className="py-2 text-text-muted">{new Date(v.occurred_at).toLocaleString()}</td>
+                  <td className="py-2 text-text-muted" suppressHydrationWarning>{formatDateTime(v.occurred_at)}</td>
                 </tr>
               ))}
               {(!violations || violations.length === 0) && (

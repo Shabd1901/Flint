@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 import { AlertTriangle, MonitorOff, Copy, UserX, Ghost } from 'lucide-react'
 
+import { formatTime } from '@/utils/formatDate'
+
 // Helper to map violation types to readable text and icons
 const VIOLATION_MAP: Record<string, { label: string, icon: any, color: string }> = {
   tab_switch: { label: 'Switched tabs', icon: MonitorOff, color: 'text-amber-500 bg-amber-50' },
@@ -59,8 +61,8 @@ export function IntegrityFeed({ initialEvents, orgId }: { initialEvents: any[], 
                     <p className="text-sm font-semibold truncate text-text">
                       {event.candidate_name}
                     </p>
-                    <span className="text-[10px] uppercase font-medium text-text-muted shrink-0">
-                      {new Date(event.occurred_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    <span className="text-[10px] uppercase font-medium text-text-muted shrink-0" suppressHydrationWarning>
+                      {formatTime(event.occurred_at)}
                     </span>
                   </div>
                   <p className="text-xs text-text-muted mt-0.5 flex items-center gap-1.5">

@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { formatDateTime } from '@/utils/formatDate'
 
 export default async function AdminExams() {
   const supabase = await createClient()
@@ -60,7 +61,7 @@ export default async function AdminExams() {
                   <p className="text-text-muted text-sm">{exam.description}</p>
                   <div className="mt-4 text-xs text-text-muted flex gap-4">
                     <span>Duration: {exam.duration_minutes}m</span>
-                    <span>Starts: {exam.start_at ? new Date(exam.start_at).toLocaleString() : 'Anytime'}</span>
+                    <span suppressHydrationWarning>Starts: {exam.start_at ? formatDateTime(exam.start_at) : 'Anytime'}</span>
                   </div>
                 </div>
               ))}

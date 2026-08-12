@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { Download, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react'
+import { formatDateTime } from '@/utils/formatDate'
 
 function parseArray(val: any): string[] {
   if (!val) return []
@@ -234,9 +235,9 @@ export default async function ExamDetails({ params }: { params: Promise<{ id: st
                               {attempt.score !== null && <div className="mt-1 font-mono font-bold text-accent">Score: {attempt.score}</div>}
                             </div>
 
-                            <div className="text-text-muted text-xs">
-                              <div>Started: {new Date(attempt.started_at).toLocaleString()}</div>
-                              {attempt.submitted_at && <div>Finished: {new Date(attempt.submitted_at).toLocaleString()}</div>}
+                            <div className="text-text-muted text-xs" suppressHydrationWarning>
+                              <div>Started: {formatDateTime(attempt.started_at)}</div>
+                              {attempt.submitted_at && <div>Finished: {formatDateTime(attempt.submitted_at)}</div>}
                             </div>
 
                             <div className="flex items-center justify-between">

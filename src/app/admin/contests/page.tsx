@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { formatDateTime } from '@/utils/formatDate'
 
 export default async function AdminContests() {
   const supabase = await createClient()
@@ -62,7 +63,7 @@ export default async function AdminContests() {
                   <div className="mt-4 pt-3 border-t text-xs text-text-muted flex justify-between items-center">
                     <div className="flex gap-4">
                       <span>Duration: {c.duration_minutes}m</span>
-                      <span>Starts: {c.start_at ? new Date(c.start_at).toLocaleString() : 'Anytime'}</span>
+                      <span suppressHydrationWarning>Starts: {c.start_at ? formatDateTime(c.start_at) : 'Anytime'}</span>
                     </div>
                     <div className="flex gap-2">
                       <a href={`/admin/contests/${c.id}/problems`} className="px-2.5 py-1 bg-surface-soft rounded text-text font-medium hover:bg-line transition">

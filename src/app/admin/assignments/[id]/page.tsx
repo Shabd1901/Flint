@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { formatDateTime } from '@/utils/formatDate'
 
 export default async function AssignmentDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -60,7 +61,7 @@ export default async function AssignmentDetails({ params }: { params: Promise<{ 
                   )}
                   {!sub.link_url && !sub.file_url && <span className="text-text-muted text-xs">No attachment</span>}
                 </td>
-                <td className="px-5 py-3 text-text-muted">{new Date(sub.submitted_at).toLocaleString()}</td>
+                <td className="px-5 py-3 text-text-muted" suppressHydrationWarning>{formatDateTime(sub.submitted_at)}</td>
                 <td className="px-5 py-3">
                   {sub.score !== null ? (
                     <div>

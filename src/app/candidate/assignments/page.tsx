@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { formatDateTime } from '@/utils/formatDate'
 
 export default async function CandidateAssignments() {
   const supabase = await createClient()
@@ -89,7 +90,7 @@ export default async function CandidateAssignments() {
                 
                 <div className="mt-5 pt-4 border-t">
                   <div className="flex justify-between items-center text-xs text-text-muted mb-3">
-                    <span>Due: {new Date(a.due_at).toLocaleString()}</span>
+                    <span suppressHydrationWarning>Due: {formatDateTime(a.due_at)}</span>
                     <span>Max Score: {a.max_score}</span>
                   </div>
                   
