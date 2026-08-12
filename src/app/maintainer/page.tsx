@@ -50,6 +50,9 @@ export default async function MaintainerDashboard() {
       name,
       email
     })
+
+    const { revalidatePath } = await import('next/cache')
+    revalidatePath('/maintainer')
   }
 
   return (
