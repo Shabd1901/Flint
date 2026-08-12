@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/exams/cron-submit",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/contests/cron-submit",
+      "schedule": "* * * * *"
+    }
+  ]
+}

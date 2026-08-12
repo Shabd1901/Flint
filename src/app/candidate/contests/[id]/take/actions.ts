@@ -101,3 +101,57 @@ export async function submitFullSolution(
 
   return { passedCount, totalCount, score: totalScore, results }
 }
+
+export async function logContestViolation(attemptId: string, type: string, meta?: any) {
+  const supabase = await createClient()
+
+  await supabase.from('violation_events').insert({
+    contest_attempt_id: attemptId,
+    type,
+    meta: meta || {}
+  })
+}
+
+export async function heartbeatContestSession(attemptId: string, sessionToken: string): Promise<{ valid: boolean }> {
+  const supabase = await createClient()
+
+  const { data: attempt, error } = await supabase
+    .from('contest_attempts')
+    .select('active_session_token, last_heartbeat')
+    .eq('id', attemptId)
+    .single()
+
+  if (error || !attempt) {
+    return { valid: false }
+  }
+
+  if (!attempt.active_session_token) {
+    await supabase
+      .from('contest_attempts')
+      .update({ active_session_token: sessionToken, last_heartbeat: new Date().toISOString() })
+      .eq('id', attemptId)
+    return { valid: true }
+  }
+
+  if (attempt.active_session_token === sessionToken) {
+    await supabase
+      .from('contest_attempts')
+      .update({ last_heartbeat: new Date().toISOString() })
+      .eq('id', attemptId)
+    return { valid: true }
+  }
+
+  const lastHeartbeat = attempt.last_heartbeat ? new Date(attempt.last_heartbeat).getTime() : 0
+  const now = Date.now()
+
+  if (now - lastHeartbeat > 15000) {
+    await supabase
+      .from('contest_attempts')
+      .update({ active_session_token: sessionToken, last_heartbeat: new Date().toISOString() })
+      .eq('id', attemptId)
+    return { valid: true }
+  }
+
+  await logContestViolation(attemptId, 'multi_session', { action: 'concurrent_session_detected', new_token: sessionToken })
+  return { valid: false }
+}

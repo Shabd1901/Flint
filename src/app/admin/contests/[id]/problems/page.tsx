@@ -77,14 +77,23 @@ export default async function ContestProblems({ params }: { params: Promise<{ id
           <p className="text-text-muted mt-1">Manage Contest Problems & Test Cases</p>
         </div>
 
-        <form action={updateContestStatus} className="flex gap-2 surface-card p-1.5">
-          <select name="status" defaultValue={contest?.status} className="h-9 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm">
-            <option value="draft">Draft</option>
-            <option value="live">Live</option>
-            <option value="closed">Closed</option>
-          </select>
-          <button className="rounded-md border bg-white px-4 py-1.5 text-sm font-medium hover:bg-surface-soft">Update Status</button>
-        </form>
+        <div className="flex items-center gap-3">
+          <a
+            href={`/admin/contests/${id}/results`}
+            className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-strong transition"
+          >
+            View Results & Leaderboard
+          </a>
+
+          <form action={updateContestStatus} className="flex gap-2 surface-card p-1.5">
+            <select name="status" defaultValue={contest?.status} className="h-9 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm">
+              <option value="draft">Draft</option>
+              <option value="live">Live</option>
+              <option value="closed">Closed</option>
+            </select>
+            <button className="rounded-md border bg-white px-4 py-1.5 text-sm font-medium hover:bg-surface-soft">Update Status</button>
+          </form>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

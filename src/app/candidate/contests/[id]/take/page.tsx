@@ -1,6 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { CodeWorkspace } from './CodeWorkspace'
+import { ProctoringWrapper } from '@/app/candidate/exams/[id]/take/ProctoringWrapper'
+import { logContestViolation, heartbeatContestSession } from './actions'
 
 export default async function ContestTake({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -29,7 +31,9 @@ export default async function ContestTake({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <div className="container-page py-6 md:py-8 space-y-6">
+    <div className="container-page py-6 md:py-8 space-y-6 relative">
+      <ProctoringWrapper attemptId={attempt.id} logAction={logContestViolation} heartbeatAction={heartbeatContestSession} />
+
       <div className="flex justify-between items-center border-b pb-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{contest?.title}</h1>

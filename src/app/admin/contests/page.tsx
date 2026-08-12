@@ -59,9 +59,19 @@ export default async function AdminContests() {
                       {c.status}
                     </span>
                   </div>
-                  <div className="mt-4 text-xs text-text-muted flex gap-4">
-                    <span>Duration: {c.duration_minutes}m</span>
-                    <span>Starts: {c.start_at ? new Date(c.start_at).toLocaleString() : 'Anytime'}</span>
+                  <div className="mt-4 pt-3 border-t text-xs text-text-muted flex justify-between items-center">
+                    <div className="flex gap-4">
+                      <span>Duration: {c.duration_minutes}m</span>
+                      <span>Starts: {c.start_at ? new Date(c.start_at).toLocaleString() : 'Anytime'}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <a href={`/admin/contests/${c.id}/problems`} className="px-2.5 py-1 bg-surface-soft rounded text-text font-medium hover:bg-line transition">
+                        Problems
+                      </a>
+                      <a href={`/admin/contests/${c.id}/results`} className="px-2.5 py-1 bg-accent/10 text-accent rounded font-medium hover:bg-accent/20 transition">
+                        Results & Leaderboard
+                      </a>
+                    </div>
                   </div>
                 </div>
               ))}
