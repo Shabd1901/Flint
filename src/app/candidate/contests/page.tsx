@@ -25,6 +25,14 @@ export default async function CandidateContests() {
 
     const contestId = formData.get('contest_id') as string
 
+    // Validate start_at & end_at window
+    const { data: c } = await s.from('contests').select('start_at, end_at, status').eq('id', contestId).single()
+    if (!c || c.status !== 'live') return
+
+    const now = new Date()
+    if (c.start_at && now < new Date(c.start_at)) return
+    if (c.end_at && now > new Date(c.end_at)) return
+
     // Create attempt
     const { data: attempt, error } = await s.from('contest_attempts').insert({
       contest_id: contestId,

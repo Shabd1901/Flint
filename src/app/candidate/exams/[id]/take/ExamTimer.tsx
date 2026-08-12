@@ -17,9 +17,12 @@ export function ExamTimer({
   useEffect(() => {
     const startMs = new Date(startedAt).getTime()
     const endMs = startMs + durationMinutes * 60 * 1000
+    const initialRemaining = Math.max(0, endMs - Date.now())
+    const mountPerfTime = performance.now()
 
     const updateTimer = () => {
-      const remaining = endMs - Date.now()
+      const elapsedSinceMount = performance.now() - mountPerfTime
+      const remaining = initialRemaining - elapsedSinceMount
       if (remaining <= 0) {
         setTimeLeftMs(0)
         onExpire()

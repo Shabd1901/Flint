@@ -25,6 +25,14 @@ export default async function CandidateExams() {
     
     const examId = formData.get('exam_id') as string
 
+    // Validate start_at & end_at window
+    const { data: ex } = await s.from('exams').select('start_at, end_at, status').eq('id', examId).single()
+    if (!ex || ex.status !== 'live') return
+
+    const now = new Date()
+    if (ex.start_at && now < new Date(ex.start_at)) return
+    if (ex.end_at && now > new Date(ex.end_at)) return
+
     // Create attempt
     const { data: attempt, error } = await s.from('exam_attempts').insert({
       exam_id: examId,

@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
@@ -31,10 +32,12 @@ export default async function AdminDashboard() {
     const examIds = orgExams?.map(e => e.id) || []
     
     if (examIds.length > 0) {
+      const adminClient = createAdminClient()
+
       // 1. Fetch High-Score + High-Violation Queue
-      const { data: attempts } = await supabase
+      const { data: attempts } = await adminClient
         .from('exam_attempts')
-        .select('id, score, violation_score, status, profiles(name)')
+        .select('id, score, violation_score, status, candidate_id, profiles(name)')
         .in('exam_id', examIds)
         .order('violation_score', { ascending: false })
         .limit(10)
@@ -42,7 +45,7 @@ export default async function AdminDashboard() {
       reviewQueue = (attempts || [])
         .filter(a => a.status === 'submitted' && (a.violation_score || 0) > 0)
         .map(a => ({
-          candidate: (a.profiles as any)?.name || 'Unknown',
+          candidate: (a.profiles as any)?.name || 'Candidate',
           score: a.score ?? '-',
           violation: a.violation_score ?? 0,
           status: (a.violation_score || 0) >= 5 ? 'Review' : 'Clear'
@@ -50,7 +53,7 @@ export default async function AdminDashboard() {
 
       // 2. Fetch Active Sessions (in_progress with recent heartbeat)
       const fifteenSecsAgo = new Date(Date.now() - 15000).toISOString()
-      const { count: activeCount } = await supabase
+      const { count: activeCount } = await adminClient
         .from('exam_attempts')
         .select('id', { count: 'exact', head: true })
         .in('exam_id', examIds)
@@ -59,28 +62,46 @@ export default async function AdminDashboard() {
       activeSessionsCount = activeCount || 0
 
       // 3. Fetch Integrity Feed (Recent Events)
-      const { data: events } = await supabase
+      const { data: events } = await adminClient
         .from('violation_events')
-        .select('id, type, occurred_at, attempt_id')
+        .select('id, type, occurred_at, attempt_id, contest_attempt_id')
         .order('occurred_at', { ascending: false })
         .limit(20)
 
       // Get candidate names for these events
       if (events && events.length > 0) {
-        const attemptIds = events.map(e => e.attempt_id)
-        const { data: attemptDetails } = await supabase
-          .from('exam_attempts')
-          .select('id, exam_id, profiles(name)')
-          .in('id', attemptIds)
-        
-        const detailsMap = new Map(attemptDetails?.map(a => [a.id, a]) || [])
-        
+        const examAttemptIds = events.map(e => e.attempt_id).filter(Boolean)
+        const contestAttemptIds = events.map(e => e.contest_attempt_id).filter(Boolean)
+
+        const { data: examDetails } = examAttemptIds.length > 0
+          ? await adminClient.from('exam_attempts').select('id, exam_id, profiles(name)').in('id', examAttemptIds)
+          : { data: [] }
+
+        const { data: contestDetails } = contestAttemptIds.length > 0
+          ? await adminClient.from('contest_attempts').select('id, contest_id, profiles(name)').in('id', contestAttemptIds)
+          : { data: [] }
+
+        const examMapDetails = new Map(examDetails?.map(a => [a.id, a]) || [])
+        const contestMapDetails = new Map(contestDetails?.map(c => [c.id, c]) || [])
+
         recentEvents = events.map(e => {
-          const detail = detailsMap.get(e.attempt_id) as any
+          let candidateName = 'Candidate'
+          let assessmentTitle = 'Assessment'
+
+          if (e.attempt_id) {
+            const detail = examMapDetails.get(e.attempt_id) as any
+            candidateName = detail?.profiles?.name || 'Candidate'
+            assessmentTitle = examMap.get(detail?.exam_id) || 'Exam'
+          } else if (e.contest_attempt_id) {
+            const detail = contestMapDetails.get(e.contest_attempt_id) as any
+            candidateName = detail?.profiles?.name || 'Candidate'
+            assessmentTitle = 'Contest'
+          }
+
           return {
             ...e,
-            candidate_name: detail?.profiles?.name || 'Unknown',
-            exam_title: examMap.get(detail?.exam_id) || 'Unknown Exam'
+            candidate_name: candidateName,
+            exam_title: assessmentTitle
           }
         })
       }

@@ -37,13 +37,22 @@ export default async function ExamTake({ params }: { params: Promise<{ id: strin
     const s = await createClient()
     const { data: { user } } = await s.auth.getUser()
 
-    const { data: currentAttempt } = await s.from('exam_attempts')
-      .select('id')
+    // Atomic idempotency guard: transition status from in_progress -> submitted
+    const { data: updatedAttempt } = await s.from('exam_attempts')
+      .update({ 
+        status: 'submitted', 
+        submitted_at: new Date().toISOString()
+      })
       .eq('exam_id', id)
       .eq('candidate_id', user!.id)
+      .eq('status', 'in_progress')
+      .select('id')
       .single()
 
-    if (!currentAttempt) return
+    if (!updatedAttempt) {
+      redirect('/candidate/exams')
+      return
+    }
 
     // Auto-grade
     const { data: allQuestions } = await s.from('questions')
@@ -52,7 +61,7 @@ export default async function ExamTake({ params }: { params: Promise<{ id: strin
 
     const { data: allAnswers } = await s.from('exam_answers')
       .select('question_id, selected_options')
-      .eq('attempt_id', currentAttempt.id)
+      .eq('attempt_id', updatedAttempt.id)
 
     let totalScore = 0
     const answerMap = new Map(allAnswers?.map(a => [a.question_id, a]))
@@ -71,12 +80,8 @@ export default async function ExamTake({ params }: { params: Promise<{ id: strin
     }
 
     await s.from('exam_attempts')
-      .update({ 
-        status: 'submitted', 
-        submitted_at: new Date().toISOString(),
-        score: totalScore
-      })
-      .eq('id', currentAttempt.id)
+      .update({ score: totalScore })
+      .eq('id', updatedAttempt.id)
 
     redirect('/candidate/exams')
   }
