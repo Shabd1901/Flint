@@ -389,6 +389,9 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('assignment-submissions', 'assignment-submissions', true)
 ON CONFLICT (id) DO NOTHING;
 
+DROP POLICY IF EXISTS "Public Read Assignment Files" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Upload Assignment Files" ON storage.objects;
+
 CREATE POLICY "Public Read Assignment Files"
 ON storage.objects FOR SELECT
 USING (bucket_id = 'assignment-submissions');
