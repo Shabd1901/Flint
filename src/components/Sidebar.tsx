@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { LogOut, Menu, X, type LucideIcon } from 'lucide-react'
+import { createClient } from '@/utils/supabase/client'
 
 export interface NavItem {
   label: string
@@ -21,14 +22,33 @@ export function Sidebar({
   title: string
   role: string
   navItems: NavItem[]
-  handleSignOut: () => Promise<void>
+  handleSignOut?: () => Promise<void>
 }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isSigningOut, setIsSigningOut] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
 
   // Hide sidebar completely when taking an assessment
   if (pathname.includes('/take')) {
     return null
+  }
+
+  const onSignOutSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSigningOut(true)
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+      if (handleSignOut) {
+        await handleSignOut().catch(() => {})
+      }
+    } catch {
+      // ignore errors
+    } finally {
+      router.push('/login')
+      router.refresh()
+    }
   }
 
   return (
@@ -88,13 +108,14 @@ export function Sidebar({
         </div>
 
         <div className="mt-auto pt-6">
-          <form action={handleSignOut}>
+          <form onSubmit={onSignOutSubmit}>
             <button
               type="submit"
-              className="flex w-full items-center justify-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-sm font-medium text-text-muted transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+              disabled={isSigningOut}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border bg-white px-3 py-2.5 text-sm font-medium text-text-muted transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50"
             >
               <LogOut size={16} />
-              Sign out
+              {isSigningOut ? 'Signing out...' : 'Sign out'}
             </button>
           </form>
         </div>
