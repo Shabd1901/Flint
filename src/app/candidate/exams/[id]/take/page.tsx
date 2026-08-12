@@ -1,9 +1,21 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { ProctoringWrapper } from './ProctoringWrapper'
-import { QuestionForm } from './QuestionForm'
-import { ExamTimer } from './ExamTimer'
+import { ExamTakeWorkspace } from './ExamTakeWorkspace'
 import { logViolation, heartbeatSession } from './actions'
+
+function parseArray(val: any): string[] {
+  if (!val) return []
+  if (Array.isArray(val)) return val.map(String)
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val)
+      return Array.isArray(parsed) ? parsed.map(String) : [String(parsed)]
+    } catch {
+      return [val]
+    }
+  }
+  return []
+}
 
 export default async function ExamTake({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -70,8 +82,8 @@ export default async function ExamTake({ params }: { params: Promise<{ id: strin
       const answer = answerMap.get(q.id)
       if (!answer) continue
 
-      const correct = typeof q.correct_options === 'string' ? JSON.parse(q.correct_options) : (q.correct_options || [])
-      const selected = typeof answer.selected_options === 'string' ? JSON.parse(answer.selected_options) : (answer.selected_options || [])
+      const correct = parseArray(q.correct_options)
+      const selected = parseArray(answer.selected_options)
 
       const isCorrect = correct.length === selected.length && correct.every((c: string) => selected.includes(c))
       if (isCorrect) {
@@ -92,62 +104,34 @@ export default async function ExamTake({ params }: { params: Promise<{ id: strin
     const questionId = formData.get('question_id') as string
     const attemptId = formData.get('attempt_id') as string
     
-    const selectedRaw = formData.getAll('options')
-    const selectedStr = formData.get('option')
+    const selectedRaw = formData.getAll('options').map(String)
+    const selectedStr = formData.get('option') as string
 
     const selectedOptions = selectedRaw.length > 0 ? selectedRaw : (selectedStr ? [selectedStr] : [])
 
     const { data: existing } = await s.from('exam_answers').select('id').eq('attempt_id', attemptId).eq('question_id', questionId).single()
     
     if (existing) {
-      await s.from('exam_answers').update({ selected_options: JSON.stringify(selectedOptions) }).eq('id', existing.id)
+      await s.from('exam_answers').update({ selected_options: selectedOptions }).eq('id', existing.id)
     } else {
       await s.from('exam_answers').insert({
         attempt_id: attemptId,
         question_id: questionId,
-        selected_options: JSON.stringify(selectedOptions)
+        selected_options: selectedOptions
       })
     }
   }
 
   return (
-    <div className="container-page py-6 md:py-8 max-w-4xl space-y-6 relative">
-      <ProctoringWrapper attemptId={attempt.id} logAction={logViolation} heartbeatAction={heartbeatSession} />
-
-      <div className="flex flex-wrap justify-between items-center surface-card p-5 sticky top-4 z-10 shadow-lg gap-4">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">Exam In Progress</h1>
-          <p className="text-xs text-text-muted">Answers are auto-saved</p>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <ExamTimer startedAt={attempt.started_at} durationMinutes={durationMinutes} onExpire={submitExam} />
-          
-          <form action={submitExam}>
-            <button className="rounded-md bg-accent px-5 py-2 text-sm font-semibold text-white hover:bg-accent-strong transition">
-              Finish & Submit
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {questions?.map((q: any, i: number) => {
-          const existingAns = answersMap.get(q.id)
-          const savedSelection = existingAns ? (typeof existingAns.selected_options === 'string' ? JSON.parse(existingAns.selected_options) : existingAns.selected_options) : []
-
-          return (
-            <QuestionForm
-              key={q.id}
-              question={q}
-              index={i}
-              attemptId={attempt.id}
-              savedSelection={savedSelection}
-              saveAnswer={saveAnswer}
-            />
-          )
-        })}
-      </div>
-    </div>
+    <ExamTakeWorkspace
+      attempt={attempt}
+      durationMinutes={durationMinutes}
+      questions={questions || []}
+      answersMap={answersMap}
+      submitExam={submitExam}
+      saveAnswer={saveAnswer}
+      logViolation={logViolation}
+      heartbeatSession={heartbeatSession}
+    />
   )
 }

@@ -26,6 +26,11 @@ export function Sidebar({
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
 
+  // Hide sidebar completely when taking an assessment
+  if (pathname.includes('/take')) {
+    return null
+  }
+
   return (
     <>
       <div className="sticky top-0 z-40 flex items-center justify-between border-b bg-surface p-4 md:hidden">

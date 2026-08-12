@@ -87,7 +87,11 @@ export default async function CandidateExams() {
                   
                   {isFinished ? (
                     <div className="w-full text-center py-2 bg-surface-soft rounded-lg text-sm font-medium text-text-muted">
-                      Score: {attempt.score !== null ? attempt.score : 'Pending'}
+                      {exam.auto_release_results ?? true ? (
+                        attempt.score !== null ? `Score: ${attempt.score}` : 'Pending'
+                      ) : (
+                        'Submitted — Score Pending Teacher Release'
+                      )}
                     </div>
                   ) : inProgress ? (
                     <a href={`/candidate/exams/${exam.id}/take`} className="block w-full text-center py-2 rounded-md bg-amber-500 text-white font-medium hover:bg-amber-600 transition">

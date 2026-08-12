@@ -55,6 +55,7 @@ CREATE TABLE exams (
     end_at TIMESTAMPTZ,
     negative_marking BOOLEAN NOT NULL DEFAULT false,
     randomize BOOLEAN NOT NULL DEFAULT false,
+    auto_release_results BOOLEAN NOT NULL DEFAULT true,
     status exam_status NOT NULL DEFAULT 'draft',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

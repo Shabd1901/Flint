@@ -1,26 +1,39 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ShieldAlert, Maximize2 } from 'lucide-react'
+import { ShieldAlert, Maximize2, AlertTriangle, X } from 'lucide-react'
+
+const VIOLATION_LABELS: Record<string, string> = {
+  tab_switch: 'Tab Switch Detected',
+  blur: 'Window Focus Lost',
+  fullscreen_exit: 'Exited Fullscreen Mode',
+  devtools: 'Developer Tools Opened',
+  multi_session: 'Concurrent Session Detected',
+  copy_paste_blocked: 'Copy/Paste Attempt Blocked'
+}
 
 export function ProctoringWrapper({ 
   attemptId, 
   logAction, 
-  heartbeatAction 
+  heartbeatAction,
+  onWarningCountChange
 }: { 
   attemptId: string
   logAction: (attemptId: string, type: string, meta?: any) => Promise<void>
   heartbeatAction: (attemptId: string, token: string) => Promise<{ valid: boolean }>
+  onWarningCountChange?: (count: number) => void
 }) {
   const hasLoggedDevtools = useRef(false)
   const lastLogTime = useRef<Record<string, number>>({})
   const [sessionLocked, setSessionLocked] = useState(false)
   const [isProctoringStarted, setIsProctoringStarted] = useState(false)
+  const [warningCount, setWarningCount] = useState(0)
+  const [activeWarning, setActiveWarning] = useState<string | null>(null)
 
   const handleStartFullscreen = () => {
     document.documentElement.requestFullscreen()
       .then(() => setIsProctoringStarted(true))
-      .catch(() => setIsProctoringStarted(true)) // Start proctoring even if fullscreen permission is denied by browser
+      .catch(() => setIsProctoringStarted(true))
   }
 
   useEffect(() => {
@@ -36,6 +49,17 @@ export function ProctoringWrapper({
       const lastTime = lastLogTime.current[type] || 0
       if (now - lastTime < 5000) return
       lastLogTime.current[type] = now
+
+      setWarningCount((prev) => {
+        const next = prev + 1
+        onWarningCountChange?.(next)
+        return next
+      })
+
+      const label = VIOLATION_LABELS[type] || 'Violation Flagged'
+      setActiveWarning(label)
+      setTimeout(() => setActiveWarning(null), 5000)
+
       logAction(attemptId, type, meta).catch(() => {})
     }
 
@@ -76,7 +100,6 @@ export function ProctoringWrapper({
     }
 
     const detectDevTools = () => {
-      // Threshold 220px to prevent false positives from 125%/150% OS display scaling
       const threshold = 220
       const widthDiff = window.outerWidth - window.innerWidth > threshold
       const heightDiff = window.outerHeight - window.innerHeight > threshold
@@ -111,7 +134,7 @@ export function ProctoringWrapper({
       document.removeEventListener('copy', handleCopyPaste)
       document.removeEventListener('paste', handleCopyPaste)
     }
-  }, [attemptId, logAction, heartbeatAction, isProctoringStarted])
+  }, [attemptId, logAction, heartbeatAction, isProctoringStarted, onWarningCountChange])
 
   if (sessionLocked) {
     return (
@@ -154,5 +177,19 @@ export function ProctoringWrapper({
     )
   }
 
-  return null
+  return (
+    <>
+      {activeWarning && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-bounce">
+          <div className="flex items-center gap-3 bg-rose-600 text-white px-5 py-3 rounded-xl shadow-2xl border border-rose-400 text-sm font-semibold">
+            <AlertTriangle size={20} className="shrink-0 animate-pulse" />
+            <span>⚠️ Warning #{warningCount}: {activeWarning}! Flag logged to instructor.</span>
+            <button onClick={() => setActiveWarning(null)} className="ml-2 hover:opacity-80">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
 }
