@@ -241,8 +241,10 @@ CREATE POLICY "Admin read enrolled candidate profiles" ON profiles FOR SELECT US
 CREATE POLICY "Maintainer read all profiles" ON profiles FOR SELECT USING (get_user_role() = 'maintainer');
 
 -- orgs
+DROP POLICY IF EXISTS "Admin access own orgs" ON orgs;
+DROP POLICY IF EXISTS "Candidate read orgs" ON orgs;
 CREATE POLICY "Admin access own orgs" ON orgs FOR ALL USING (admin_id = auth.uid());
-CREATE POLICY "Candidate read orgs" ON orgs FOR SELECT USING (is_enrolled(id) OR invite_code IS NOT NULL);
+CREATE POLICY "Candidate read orgs" ON orgs FOR SELECT USING (is_enrolled(id));
 
 -- enrollments
 CREATE POLICY "Admin access enrollments" ON enrollments FOR ALL USING (is_org_admin(org_id));
