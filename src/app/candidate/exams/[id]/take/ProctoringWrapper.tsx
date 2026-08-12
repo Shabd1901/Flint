@@ -25,6 +25,7 @@ export function ProctoringWrapper({
 }) {
   const hasLoggedDevtools = useRef(false)
   const lastLogTime = useRef<Record<string, number>>({})
+  const warningCountRef = useRef(0)
   const [sessionLocked, setSessionLocked] = useState(false)
   const [isProctoringStarted, setIsProctoringStarted] = useState(false)
   const [warningCount, setWarningCount] = useState(0)
@@ -50,11 +51,14 @@ export function ProctoringWrapper({
       if (now - lastTime < 5000) return
       lastLogTime.current[type] = now
 
-      setWarningCount((prev) => {
-        const next = prev + 1
-        onWarningCountChange?.(next)
-        return next
-      })
+      warningCountRef.current += 1
+      const newCount = warningCountRef.current
+      setWarningCount(newCount)
+
+      // Defer parent state update to avoid React setState during render console error
+      setTimeout(() => {
+        onWarningCountChange?.(newCount)
+      }, 0)
 
       const label = VIOLATION_LABELS[type] || 'Violation Flagged'
       setActiveWarning(label)
