@@ -12,7 +12,7 @@ export default async function AdminDashboard() {
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase.from('profiles').select('name, email').eq('id', user.id).single()
-  const { data: org } = await supabase.from('orgs').select('id, name, invite_code').eq('admin_id', user.id).single()
+  const { data: org } = await supabase.from('orgs').select('id, name, invite_code').eq('admin_id', user.id).limit(1).single()
 
   let examCount = 0
   let candidateCount = 0

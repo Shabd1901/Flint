@@ -36,7 +36,7 @@ export default async function ExamTake({ params }: { params: Promise<{ id: strin
 
   // Fetch questions (select specific columns — excludes correct_options from client)
   const { data: questions } = await supabase.from('questions')
-    .select('id, text, type, options')
+    .select('id, text, type, options, max_words, file_types')
     .eq('exam_id', id)
     .order('created_at', { ascending: true })
 
@@ -68,11 +68,11 @@ export default async function ExamTake({ params }: { params: Promise<{ id: strin
 
     // Auto-grade
     const { data: allQuestions } = await s.from('questions')
-      .select('id, correct_options, marks')
+      .select('id, type, correct_options, correct_text, correct_number, tolerance, marks')
       .eq('exam_id', id)
 
     const { data: allAnswers } = await s.from('exam_answers')
-      .select('question_id, selected_options')
+      .select('question_id, selected_options, text_answer, number_answer')
       .eq('attempt_id', updatedAttempt.id)
 
     let totalScore = 0
@@ -82,10 +82,25 @@ export default async function ExamTake({ params }: { params: Promise<{ id: strin
       const answer = answerMap.get(q.id)
       if (!answer) continue
 
-      const correct = parseArray(q.correct_options)
-      const selected = parseArray(answer.selected_options)
+      let isCorrect = false
 
-      const isCorrect = correct.length === selected.length && correct.every((c: string) => selected.includes(c))
+      if (q.type === 'single' || q.type === 'multi') {
+        const correct = parseArray(q.correct_options)
+        const selected = parseArray(answer.selected_options)
+        isCorrect = correct.length > 0 && correct.length === selected.length && correct.every((c: string) => selected.includes(c))
+      } else if (q.type === 'true_false') {
+        const correct = parseArray(q.correct_options)[0]
+        const selected = parseArray(answer.selected_options)[0]
+        isCorrect = !!correct && !!selected && correct === selected
+      } else if (q.type === 'short_answer' || q.type === 'fill_blank') {
+        isCorrect = !!(q.correct_text && answer.text_answer && (q.correct_text.trim().toLowerCase() === answer.text_answer.trim().toLowerCase()))
+      } else if (q.type === 'numerical') {
+        if (q.correct_number !== null && answer.number_answer !== null) {
+          const diff = Math.abs(q.correct_number - answer.number_answer)
+          isCorrect = diff <= (q.tolerance || 0)
+        }
+      }
+
       if (isCorrect) {
         totalScore += Number(q.marks) || 1
       }
@@ -103,21 +118,58 @@ export default async function ExamTake({ params }: { params: Promise<{ id: strin
     const s = await createClient()
     const questionId = formData.get('question_id') as string
     const attemptId = formData.get('attempt_id') as string
+    const qType = formData.get('q_type') as string
     
-    const selectedRaw = formData.getAll('options').map(String)
-    const selectedStr = formData.get('option') as string
+    let selectedOptions: string[] | null = null
+    let textAnswer: string | null = null
+    let numberAnswer: number | null = null
+    let fileUrl: string | null = null
 
-    const selectedOptions = selectedRaw.length > 0 ? selectedRaw : (selectedStr ? [selectedStr] : [])
+    if (qType === 'single' || qType === 'multi' || qType === 'true_false') {
+      const selectedRaw = formData.getAll('options').map(String)
+      const selectedStr = formData.get('option') as string
+      selectedOptions = selectedRaw.length > 0 ? selectedRaw : (selectedStr ? [selectedStr] : [])
+    } else if (qType === 'short_answer' || qType === 'long_answer' || qType === 'fill_blank') {
+      textAnswer = formData.get('text_answer') as string || null
+    } else if (qType === 'numerical') {
+      numberAnswer = formData.get('number_answer') ? Number(formData.get('number_answer')) : null
+    } else if (qType === 'file_upload') {
+      const file = formData.get('file_answer') as File | null
+      if (file && file.size > 0) {
+        const fileExt = file.name.split('.').pop()
+        const filePath = `${attemptId}/${questionId}_${Date.now()}.${fileExt}`
+        const { data: uploadData, error: uploadError } = await s.storage
+          .from('exam-uploads')
+          .upload(filePath, file, { upsert: true })
+        
+        if (!uploadError && uploadData) {
+          const { data: publicUrlData } = s.storage.from('exam-uploads').getPublicUrl(filePath)
+          fileUrl = publicUrlData.publicUrl
+        }
+      }
+    }
 
-    const { data: existing } = await s.from('exam_answers').select('id').eq('attempt_id', attemptId).eq('question_id', questionId).single()
+    const { data: existing } = await s.from('exam_answers').select('id, file_url').eq('attempt_id', attemptId).eq('question_id', questionId).single()
+    
+    if (existing && !fileUrl && qType === 'file_upload') {
+      fileUrl = existing.file_url // Preserve existing file if no new one
+    }
     
     if (existing) {
-      await s.from('exam_answers').update({ selected_options: selectedOptions }).eq('id', existing.id)
+      await s.from('exam_answers').update({ 
+        selected_options: selectedOptions,
+        text_answer: textAnswer,
+        number_answer: numberAnswer,
+        file_url: fileUrl
+      }).eq('id', existing.id)
     } else {
       await s.from('exam_answers').insert({
         attempt_id: attemptId,
         question_id: questionId,
-        selected_options: selectedOptions
+        selected_options: selectedOptions,
+        text_answer: textAnswer,
+        number_answer: numberAnswer,
+        file_url: fileUrl
       })
     }
   }

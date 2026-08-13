@@ -6,23 +6,27 @@ export default async function AdminAssignments() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
-  const { data: org } = await supabase.from('orgs').select('id').eq('admin_id', user!.id).single()
+  const { data: org } = await supabase.from('orgs').select('id').eq('admin_id', user!.id).limit(1).single()
   const { data: assignments } = org ? await supabase.from('assignments').select('*').eq('org_id', org.id).order('created_at', { ascending: false }) : { data: [] }
 
-  async function createAssignment(formData: FormData) {
-    'use server'
-    const s = await createClient()
-    const { data: { user } } = await s.auth.getUser()
-    const { data: o } = await s.from('orgs').select('id').eq('admin_id', user!.id).single()
-    
-    await s.from('assignments').insert({
-      org_id: o!.id,
-      title: formData.get('title'),
-      instructions: formData.get('instructions'),
-      due_at: formData.get('due_at'),
-      max_score: Number(formData.get('max_score'))
-    })
-    revalidatePath('/admin/assignments')
+    async function createAssignment(formData: FormData) {
+      'use server'
+      const s = await createClient()
+      const { data: { user } } = await s.auth.getUser()
+      const { data: o } = await s.from('orgs').select('id').eq('admin_id', user!.id).limit(1).single()
+      
+      const subTypesRaw = formData.getAll('submission_types').map(String)
+      const submission_types = subTypesRaw.length > 0 ? subTypesRaw : ['file', 'link', 'text']
+
+      await s.from('assignments').insert({
+        org_id: o!.id,
+        title: formData.get('title'),
+        instructions: formData.get('instructions'),
+        due_at: formData.get('due_at'),
+        max_score: Number(formData.get('max_score')),
+        submission_types
+      })
+      revalidatePath('/admin/assignments')
   }
 
   if (!org) {
@@ -77,6 +81,21 @@ export default async function AdminAssignments() {
             <div>
               <label className="block text-sm font-medium text-text-muted mb-1">Due Date</label>
               <input type="datetime-local" name="due_at" required className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-text-muted mb-2">Allowed Submission Formats</label>
+              <div className="flex gap-4 items-center">
+                <label className="flex items-center gap-2 text-sm cursor-pointer hover:opacity-80">
+                  <input type="checkbox" name="submission_types" value="file" defaultChecked className="w-4 h-4 text-accent border-line rounded focus:ring-accent" /> File Upload
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer hover:opacity-80">
+                  <input type="checkbox" name="submission_types" value="link" defaultChecked className="w-4 h-4 text-accent border-line rounded focus:ring-accent" /> URL Link
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer hover:opacity-80">
+                  <input type="checkbox" name="submission_types" value="text" defaultChecked className="w-4 h-4 text-accent border-line rounded focus:ring-accent" /> Typed Text
+                </label>
+              </div>
             </div>
 
             <div>

@@ -1,7 +1,11 @@
 import { createClient } from '@/utils/supabase/server'
-import { revalidatePath } from 'next/cache'
-import { Download, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react'
+import { Download, CheckCircle2, XCircle, Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import { formatDateTime } from '@/utils/formatDate'
+import { QuestionManager } from './QuestionManager'
+import { ExamSettingsEditor } from './ExamSettingsEditor'
+import { updateExamStatus, toggleResultRelease } from './actions'
+import { DeleteExamButton } from './DeleteExamButton'
+import Link from 'next/link'
 
 function parseArray(val: any): string[] {
   if (!val) return []
@@ -38,54 +42,33 @@ export default async function ExamDetails({ params }: { params: Promise<{ id: st
     answersByAttempt.get(ans.attempt_id)!.set(ans.question_id, ans)
   }
 
-  async function addQuestion(formData: FormData) {
-    'use server'
-    const s = await createClient()
-    
-    const optionsRaw = formData.get('options') as string
-    const options = optionsRaw.split(',').map(o => o.trim()).filter(Boolean)
-    
-    const correctRaw = formData.get('correct_options') as string
-    const correct_options = correctRaw.split(',').map(o => o.trim()).filter(Boolean)
-
-    await s.from('questions').insert({
-      exam_id: id,
-      text: formData.get('question_text'),
-      type: formData.get('type'),
-      options: options,
-      correct_options: correct_options,
-      marks: Number(formData.get('marks')) || 1
-    })
-    
-    revalidatePath(`/admin/exams/${id}`)
-  }
-
-  async function updateExamStatus(formData: FormData) {
-    'use server'
-    const s = await createClient()
-    await s.from('exams').update({ status: formData.get('status') }).eq('id', id)
-    revalidatePath(`/admin/exams/${id}`)
-  }
-
-  async function toggleResultRelease(formData: FormData) {
-    'use server'
-    const s = await createClient()
-    const currentVal = formData.get('current_auto_release') === 'true'
-    await s.from('exams').update({ auto_release_results: !currentVal }).eq('id', id)
-    revalidatePath(`/admin/exams/${id}`)
-  }
-
   return (
     <div className="container-page py-6 md:py-8 space-y-6">
+      {/* Breadcrumb */}
+      <Link href="/admin/exams" className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-accent transition">
+        <ArrowLeft size={14} />
+        Back to Exams
+      </Link>
+
+      {/* Header */}
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{exam?.title}</h1>
           <p className="text-text-muted mt-1">{exam?.description}</p>
+          <div className="flex flex-wrap gap-3 mt-2 text-xs text-text-muted">
+            <span>Duration: {exam?.duration_minutes}m</span>
+            {exam?.negative_marking && (
+              <span className="px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded font-semibold uppercase">Neg. Marking</span>
+            )}
+            {exam?.randomize && (
+              <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded font-semibold uppercase">Randomized</span>
+            )}
+          </div>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-          <form action={toggleResultRelease}>
-            <input type="hidden" name="current_auto_release" value={String(exam?.auto_release_results ?? true)} />
+          {/* Result Release Toggle */}
+          <form action={toggleResultRelease.bind(null, id, exam?.auto_release_results ?? true)}>
             <button
               type="submit"
               className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-semibold transition ${
@@ -95,108 +78,58 @@ export default async function ExamDetails({ params }: { params: Promise<{ id: st
               }`}
             >
               {exam?.auto_release_results ?? true ? (
-                <>
-                  <Eye size={14} /> Auto-Release Scores: ON
-                </>
+                <><Eye size={14} /> Auto-Release: ON</>
               ) : (
-                <>
-                  <EyeOff size={14} /> Scores Held For Review: OFF
-                </>
+                <><EyeOff size={14} /> Scores Held</>
               )}
             </button>
           </form>
 
+          {/* Export CSV */}
           <a
             href={`/api/admin/exams/${id}/export`}
             className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-strong transition"
           >
             <Download size={16} />
-            Export Shortlist CSV
+            Export CSV
           </a>
 
-          <form action={updateExamStatus} className="flex gap-2 surface-card p-1.5">
+          {/* Status Dropdown */}
+          <form action={async (fd: FormData) => {
+            'use server'
+            await updateExamStatus(id, fd.get('status') as string)
+          }} className="flex gap-2 surface-card p-1.5">
             <select name="status" defaultValue={exam?.status} className="h-9 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm">
               <option value="draft">Draft</option>
               <option value="live">Live</option>
               <option value="closed">Closed</option>
             </select>
-            <button className="rounded-md border bg-white px-4 py-1.5 text-sm font-medium hover:bg-surface-soft">Update Status</button>
+            <button className="rounded-md border bg-white px-4 py-1.5 text-sm font-medium hover:bg-surface-soft">Update</button>
           </form>
+
+          {/* Delete Exam */}
+          <DeleteExamButton examId={id} />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-semibold text-text-muted">Questions ({questions?.length || 0})</h2>
-          
-          <div className="space-y-4">
-            {questions?.map((q: any, i: number) => {
-              const opts = parseArray(q.options)
-              const correct = parseArray(q.correct_options)
-              return (
-                <div key={q.id} className="surface-card p-5">
-                  <div className="flex gap-3 items-start">
-                    <span className="font-bold text-text-muted">{i + 1}.</span>
-                    <div className="space-y-3 flex-1">
-                      <p className="font-medium">{q.text}</p>
-                      <ul className="space-y-1">
-                        {opts?.map((opt: string, idx: number) => (
-                          <li key={idx} className={`px-3 py-2 rounded-lg text-sm ${correct?.includes(opt) ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium' : 'bg-surface-soft text-text-muted'}`}>
-                            {opt}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs uppercase bg-surface-soft text-text-muted px-2 py-1 rounded-md">{q.type}</span>
-                      <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-md font-semibold">{q.marks} mark{q.marks !== 1 ? 's' : ''}</span>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+      {/* Exam Settings Editor */}
+      {exam && (
+        <ExamSettingsEditor exam={{
+          id: exam.id,
+          title: exam.title,
+          description: exam.description || '',
+          duration_minutes: exam.duration_minutes,
+          start_at: exam.start_at,
+          end_at: exam.end_at,
+          negative_marking: exam.negative_marking,
+          randomize: exam.randomize,
+        }} />
+      )}
 
-        <div>
-          <form action={addQuestion} className="surface-card p-5 space-y-4 sticky top-8">
-            <h2 className="text-lg font-semibold mb-4">Add Question</h2>
-            
-            <div>
-              <label className="block text-sm font-medium text-text-muted mb-1">Question Text</label>
-              <textarea name="question_text" required rows={3} className="w-full rounded-md border bg-white px-3 py-2 outline-none ring-accent focus:ring-2 resize-none" />
-            </div>
+      {/* Question Manager */}
+      <QuestionManager questions={questions || []} examId={id} />
 
-            <div>
-              <label className="block text-sm font-medium text-text-muted mb-1">Type</label>
-              <select name="type" className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm">
-                <option value="single">Single Choice</option>
-                <option value="multi">Multiple Choice</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-text-muted mb-1">Options (comma separated)</label>
-              <input name="options" required className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" placeholder="A, B, C, D" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-muted mb-1">Correct Options (comma separated)</label>
-              <input name="correct_options" required className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" placeholder="A, C" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-text-muted mb-1">Marks</label>
-              <input name="marks" type="number" required defaultValue="1" min="1" className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" />
-            </div>
-
-            <button className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-accent-strong mt-4">
-              Add Question
-            </button>
-          </form>
-        </div>
-      </div>
-
+      {/* Candidate Attempts & Response Review */}
       <div className="pt-6 border-t space-y-4">
         <h2 className="text-xl font-semibold">Candidate Attempts & Response Review</h2>
         <div className="surface-card overflow-hidden">
@@ -260,17 +193,55 @@ export default async function ExamDetails({ params }: { params: Promise<{ id: st
                           <div className="space-y-3">
                             {questions?.map((q: any, qIdx: number) => {
                               const userAns = candidateAnsMap.get(q.id)
-                              const selected = parseArray(userAns?.selected_options)
-                              const correct = parseArray(q.correct_options)
-                              const isCorrect = correct.length === selected.length && correct.every((c: string) => selected.includes(c))
+                              
+                              let isCorrect = false
+                              let candDisplay = 'No Answer'
+                              let correctDisplay = 'N/A'
+                              
+                              if (q.type === 'single' || q.type === 'multi') {
+                                const selected = parseArray(userAns?.selected_options)
+                                const correct = parseArray(q.correct_options)
+                                isCorrect = correct.length > 0 && correct.length === selected.length && correct.every((c: string) => selected.includes(c))
+                                candDisplay = selected.length > 0 ? selected.join(', ') : 'No Answer Selected'
+                                correctDisplay = correct.join(', ')
+                              } else if (q.type === 'true_false') {
+                                const selected = parseArray(userAns?.selected_options)[0]
+                                const correct = parseArray(q.correct_options)[0]
+                                isCorrect = !!correct && !!selected && correct === selected
+                                candDisplay = selected || 'No Answer'
+                                correctDisplay = correct || 'N/A'
+                              } else if (q.type === 'short_answer' || q.type === 'fill_blank') {
+                                isCorrect = !!(q.correct_text && userAns?.text_answer && (q.correct_text.trim().toLowerCase() === userAns.text_answer.trim().toLowerCase()))
+                                candDisplay = userAns?.text_answer || 'No Answer'
+                                correctDisplay = q.correct_text || 'N/A'
+                              } else if (q.type === 'numerical') {
+                                if (q.correct_number !== null && userAns?.number_answer !== null && userAns?.number_answer !== undefined) {
+                                  const diff = Math.abs(q.correct_number - userAns.number_answer)
+                                  isCorrect = diff <= (q.tolerance || 0)
+                                }
+                                candDisplay = userAns?.number_answer?.toString() || 'No Answer'
+                                correctDisplay = `${q.correct_number ?? 'N/A'} ± ${q.tolerance ?? 0}`
+                              } else if (q.type === 'long_answer') {
+                                isCorrect = false // manual grading
+                                candDisplay = userAns?.text_answer || 'No Answer'
+                                correctDisplay = 'Manual Grade Required'
+                              } else if (q.type === 'file_upload') {
+                                isCorrect = false // manual grading
+                                candDisplay = userAns?.file_url ? 'File Uploaded' : 'No File'
+                                correctDisplay = 'Manual Grade Required'
+                              }
 
                               return (
                                 <div key={q.id} className="p-3 bg-white rounded-lg border text-xs space-y-2">
                                   <div className="flex justify-between items-start font-medium">
-                                    <span>{qIdx + 1}. {q.text}</span>
+                                    <span>{qIdx + 1}. {q.text} <span className="text-[10px] uppercase bg-surface-soft px-1.5 py-0.5 rounded ml-2">{q.type.replace('_', ' ')}</span></span>
                                     {isCorrect ? (
                                       <span className="flex items-center gap-1 text-emerald-600 font-semibold shrink-0">
                                         <CheckCircle2 size={14} /> +{q.marks} pts
+                                      </span>
+                                    ) : (q.type === 'long_answer' || q.type === 'file_upload') ? (
+                                      <span className="flex items-center gap-1 text-amber-600 font-semibold shrink-0">
+                                        Pending Review
                                       </span>
                                     ) : (
                                       <span className="flex items-center gap-1 text-rose-600 font-semibold shrink-0">
@@ -282,13 +253,17 @@ export default async function ExamDetails({ params }: { params: Promise<{ id: st
                                   <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
                                     <div className="p-2 rounded bg-surface-soft">
                                       <span className="text-text-muted block font-sans text-[10px] uppercase">Candidate Answer:</span>
-                                      <span className={selected.length > 0 ? (isCorrect ? 'text-emerald-700 font-semibold' : 'text-rose-700 font-semibold') : 'text-text-muted italic'}>
-                                        {selected.length > 0 ? selected.join(', ') : 'No Answer Selected'}
-                                      </span>
+                                      {q.type === 'file_upload' && userAns?.file_url ? (
+                                        <a href={userAns.file_url} target="_blank" className="text-accent hover:underline font-semibold flex items-center gap-1 mt-1">Download File</a>
+                                      ) : (
+                                        <span className={candDisplay !== 'No Answer' && candDisplay !== 'No Answer Selected' ? ((isCorrect || q.type === 'long_answer') ? 'text-emerald-700 font-semibold whitespace-pre-wrap' : 'text-rose-700 font-semibold whitespace-pre-wrap') : 'text-text-muted italic'}>
+                                          {candDisplay}
+                                        </span>
+                                      )}
                                     </div>
                                     <div className="p-2 rounded bg-emerald-50 border border-emerald-200">
-                                      <span className="text-emerald-800 block font-sans text-[10px] uppercase">Correct Answer:</span>
-                                      <span className="text-emerald-900 font-semibold">{correct.join(', ')}</span>
+                                      <span className="text-emerald-800 block font-sans text-[10px] uppercase">Correct Answer / Criteria:</span>
+                                      <span className="text-emerald-900 font-semibold">{correctDisplay}</span>
                                     </div>
                                   </div>
                                 </div>

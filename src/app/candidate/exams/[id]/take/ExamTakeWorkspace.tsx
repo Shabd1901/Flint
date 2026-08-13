@@ -86,6 +86,7 @@ export function ExamTakeWorkspace({
               index={i}
               attemptId={attempt.id}
               savedSelection={savedSelection}
+              savedAnswer={existingAns}
               saveAnswer={saveAnswer}
             />
           )

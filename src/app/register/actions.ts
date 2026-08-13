@@ -21,19 +21,34 @@ export async function register(formData: FormData) {
     email_confirm: true // auto confirm so they can login immediately
   })
 
-  if (authError || !user) {
-    redirect(`/register?error=${encodeURIComponent(authError?.message || 'Error creating account')}`)
+  let targetUserId = user?.id
+
+  if (authError) {
+    if (authError.message.toLowerCase().includes('already') || authError.code === 'email_exists') {
+      const { data: usersData } = await adminClient.auth.admin.listUsers()
+      const existingUser = usersData.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+      if (existingUser) {
+        targetUserId = existingUser.id
+        await adminClient.auth.admin.updateUserById(targetUserId, { password, email_confirm: true })
+      } else {
+        redirect(`/register?error=${encodeURIComponent(authError.message)}`)
+      }
+    } else {
+      redirect(`/register?error=${encodeURIComponent(authError.message || 'Error creating account')}`)
+    }
   }
 
-  const { error: profileError } = await adminClient.from('profiles').insert({
-    id: user.id,
-    role: 'candidate',
-    name,
-    email
-  })
+  if (targetUserId) {
+    const { error: profileError } = await adminClient.from('profiles').upsert({
+      id: targetUserId,
+      role: 'candidate',
+      name,
+      email
+    })
 
-  if (profileError) {
-    redirect(`/register?error=${encodeURIComponent('Error creating profile: ' + profileError.message)}`)
+    if (profileError) {
+      redirect(`/register?error=${encodeURIComponent('Error creating profile: ' + profileError.message)}`)
+    }
   }
 
   redirect('/login?success=' + encodeURIComponent('Account created successfully! Please sign in.'))

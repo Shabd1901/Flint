@@ -1,6 +1,7 @@
 const fs = require('fs');
-if (!process.env.SUPABASE_URL && fs.existsSync('.env')) {
-  const envConfig = fs.readFileSync('.env', 'utf-8');
+const envFile = fs.existsSync('.env.local') ? '.env.local' : (fs.existsSync('.env') ? '.env' : null);
+if (envFile) {
+  const envConfig = fs.readFileSync(envFile, 'utf-8');
   envConfig.split('\n').forEach(line => {
     const [key, ...vals] = line.split('=');
     if (key && vals.length > 0) {
@@ -11,8 +12,8 @@ if (!process.env.SUPABASE_URL && fs.existsSync('.env')) {
 global.WebSocket = require('ws');
 const { createClient } = require('@supabase/supabase-js');
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
