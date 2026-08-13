@@ -31,21 +31,22 @@ export default async function ContestTake({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <div className="container-page py-6 md:py-8 space-y-6 relative">
+    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50 relative text-sm">
       <ProctoringWrapper attemptId={attempt.id} logAction={logContestViolation} heartbeatAction={heartbeatContestSession} />
 
-      <div className="flex justify-between items-center border-b pb-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{contest?.title}</h1>
-          <p className="text-xs text-text-muted">In-browser Coding Round Workspace</p>
+      <header className="flex-none h-14 bg-white border-b flex items-center justify-between px-6 z-10">
+        <div className="flex items-center gap-4">
+          <h1 className="font-semibold tracking-tight text-text truncate max-w-sm">{contest?.title}</h1>
+          <span className="px-2 py-1 rounded bg-surface-soft text-[10px] font-bold uppercase tracking-wider text-text-muted">Coding Round</span>
         </div>
-
-        <a href="/candidate/contests" className="rounded-md border bg-white px-4 py-2 text-sm font-medium hover:bg-surface-soft">
-          Exit Contest
+        <a href="/candidate/contests" className="rounded-md border bg-white px-4 py-1.5 text-xs font-medium hover:bg-surface-soft transition-colors">
+          Exit Workspace
         </a>
-      </div>
+      </header>
 
-      <CodeWorkspace contestId={id} attemptId={attempt.id} problems={problems} />
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <CodeWorkspace contestId={id} attemptId={attempt.id} problems={problems} />
+      </div>
     </div>
   )
 }

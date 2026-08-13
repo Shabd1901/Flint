@@ -6,7 +6,7 @@ export default async function AdminContests() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: org } = await supabase.from('orgs').select('id').eq('admin_id', user!.id).single()
+  const { data: org } = await supabase.from('orgs').select('id').eq('admin_id', user!.id).limit(1).single()
   const { data: contests } = org 
     ? await supabase.from('contests').select('*').eq('org_id', org.id).order('created_at', { ascending: false }) 
     : { data: [] }
@@ -15,7 +15,7 @@ export default async function AdminContests() {
     'use server'
     const s = await createClient()
     const { data: { user } } = await s.auth.getUser()
-    const { data: o } = await s.from('orgs').select('id').eq('admin_id', user!.id).single()
+    const { data: o } = await s.from('orgs').select('id').eq('admin_id', user!.id).limit(1).single()
 
     await s.from('contests').insert({
       org_id: o!.id,

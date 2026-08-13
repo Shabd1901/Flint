@@ -2,6 +2,11 @@
 
 Flint unifies proctored MCQ exams, coding rounds, and assignments with strict role-based boundaries, server-authoritative timing, and practical integrity signals.
 
+### Recent Features Added
+- **Multi-Format Exam Engine**: Robust support for Multiple/Single Choice, True/False, Short Answer, Long Answer, Fill in the Blank, Numerical, and File Uploads with strict validations.
+- **Configurable Assignments**: Toggled configurations allowing URL links, attachments, and typed essays.
+- **HackerRank-Style Contest IDE**: Full viewport height, split-pane coding workspace with integrated terminal/console for live execution and submissions.
+
 ## Getting Started
 
 First, install dependencies:

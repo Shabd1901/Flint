@@ -19,39 +19,41 @@ export default async function CandidateAssignments() {
   const { data: submissions } = await supabase.from('assignment_submissions').select('*').eq('candidate_id', user!.id)
   const submissionMap = new Map(submissions?.map(s => [s.assignment_id, s]))
 
-  async function submitAssignment(formData: FormData) {
-    'use server'
-    const s = await createClient()
-    const { data: { user } } = await s.auth.getUser()
-    
-    const assignmentId = formData.get('assignment_id') as string
-    const linkUrl = formData.get('github_url') as string
-    const file = formData.get('attachment') as File | null
+    async function submitAssignment(formData: FormData) {
+      'use server'
+      const s = await createClient()
+      const { data: { user } } = await s.auth.getUser()
+      
+      const assignmentId = formData.get('assignment_id') as string
+      const linkUrl = formData.get('github_url') as string
+      const textAnswer = formData.get('text_answer') as string
+      const file = formData.get('attachment') as File | null
 
-    let fileUrl: string | null = null
+      let fileUrl: string | null = null
 
-    if (file && file.size > 0) {
-      const fileExt = file.name.split('.').pop()
-      const filePath = `${user!.id}/${assignmentId}_${Date.now()}.${fileExt}`
+      if (file && file.size > 0) {
+        const fileExt = file.name.split('.').pop()
+        const filePath = `${user!.id}/${assignmentId}_${Date.now()}.${fileExt}`
 
-      const { data: uploadData, error: uploadError } = await s.storage
-        .from('assignment-submissions')
-        .upload(filePath, file, { upsert: true })
+        const { data: uploadData, error: uploadError } = await s.storage
+          .from('assignment-submissions')
+          .upload(filePath, file, { upsert: true })
 
-      if (!uploadError && uploadData) {
-        const { data: publicUrlData } = s.storage.from('assignment-submissions').getPublicUrl(filePath)
-        fileUrl = publicUrlData.publicUrl
+        if (!uploadError && uploadData) {
+          const { data: publicUrlData } = s.storage.from('assignment-submissions').getPublicUrl(filePath)
+          fileUrl = publicUrlData.publicUrl
+        }
       }
-    }
 
-    await s.from('assignment_submissions').insert({
-      assignment_id: assignmentId,
-      candidate_id: user!.id,
-      link_url: linkUrl || null,
-      file_url: fileUrl || null,
-    })
-    revalidatePath('/candidate/assignments')
-  }
+      await s.from('assignment_submissions').insert({
+        assignment_id: assignmentId,
+        candidate_id: user!.id,
+        link_url: linkUrl || null,
+        file_url: fileUrl || null,
+        text_answer: textAnswer || null
+      })
+      revalidatePath('/candidate/assignments')
+    }
 
   return (
     <div className="container-page py-6 md:py-8 space-y-6">
@@ -100,6 +102,14 @@ export default async function CandidateAssignments() {
                         <span className="text-text-muted">Score:</span> 
                         <span className="font-semibold">{sub.score !== null ? `${sub.score} / ${a.max_score}` : 'Pending Grading'}</span>
                       </p>
+                      {sub.text_answer && (
+                        <div className="mt-2 text-sm text-text-muted">
+                          <span className="block font-medium mb-1 text-text">Text Submission:</span>
+                          <div className="bg-white p-2 rounded border whitespace-pre-wrap max-h-32 overflow-y-auto">
+                            {sub.text_answer}
+                          </div>
+                        </div>
+                      )}
                       {sub.link_url && (
                         <p className="text-xs text-text-muted truncate">
                           Link: <a href={sub.link_url} target="_blank" rel="noreferrer" className="text-accent underline">{sub.link_url}</a>
@@ -120,10 +130,26 @@ export default async function CandidateAssignments() {
                   ) : (
                     <form action={submitAssignment} className="space-y-3">
                       <input type="hidden" name="assignment_id" value={a.id} />
-                      <input name="github_url" type="url" placeholder="URL link (e.g. GitHub repo, Drive link)" className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm" />
+                      
+                      {(!a.submission_types || a.submission_types.includes('text')) && (
+                        <textarea 
+                          name="text_answer" 
+                          rows={4} 
+                          placeholder="Type your submission here..." 
+                          className="w-full rounded-md border bg-white px-3 py-2 outline-none ring-accent focus:ring-2 text-sm resize-y" 
+                        />
+                      )}
+                      
+                      {(!a.submission_types || a.submission_types.includes('link')) && (
+                        <input name="github_url" type="url" placeholder="URL link (e.g. GitHub repo, Drive link)" className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm" />
+                      )}
                       
                       <div className="flex items-center gap-2">
-                        <input name="attachment" type="file" className="text-xs text-text-muted flex-1 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-surface-soft file:text-text hover:file:bg-line cursor-pointer" />
+                        {(!a.submission_types || a.submission_types.includes('file')) ? (
+                          <input name="attachment" type="file" className="text-xs text-text-muted flex-1 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-surface-soft file:text-text hover:file:bg-line cursor-pointer" />
+                        ) : (
+                          <div className="flex-1"></div>
+                        )}
                         <button className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-strong transition whitespace-nowrap">
                           Submit
                         </button>

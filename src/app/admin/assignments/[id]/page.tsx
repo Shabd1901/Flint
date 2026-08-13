@@ -46,7 +46,7 @@ export default async function AssignmentDetails({ params }: { params: Promise<{ 
                   {sub.profiles?.name}
                   <div className="text-xs text-text-muted mt-0.5">{sub.profiles?.email}</div>
                 </td>
-                <td className="px-5 py-3 space-y-1">
+                <td className="px-5 py-3 space-y-2">
                   {sub.link_url && (
                     <div>
                       <a href={sub.link_url} target="_blank" rel="noreferrer" className="text-accent hover:text-accent-strong hover:underline block truncate max-w-xs">{sub.link_url}</a>
@@ -59,7 +59,12 @@ export default async function AssignmentDetails({ params }: { params: Promise<{ 
                       </a>
                     </div>
                   )}
-                  {!sub.link_url && !sub.file_url && <span className="text-text-muted text-xs">No attachment</span>}
+                  {sub.text_answer && (
+                    <div className="text-xs text-text-muted bg-surface-soft p-2 rounded max-h-24 overflow-y-auto whitespace-pre-wrap">
+                      {sub.text_answer}
+                    </div>
+                  )}
+                  {!sub.link_url && !sub.file_url && !sub.text_answer && <span className="text-text-muted text-xs">No attachment</span>}
                 </td>
                 <td className="px-5 py-3 text-text-muted" suppressHydrationWarning>{formatDateTime(sub.submitted_at)}</td>
                 <td className="px-5 py-3">
