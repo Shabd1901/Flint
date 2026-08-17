@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { login } from './actions'
+import { SubmitButton } from './SubmitButton'
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string; success?: string }> }) {
   const resolvedParams = await searchParams
@@ -52,7 +53,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               </div>
             )}
 
-            <form className="mt-5 space-y-4">
+            <form action={login} className="mt-5 space-y-4">
               <label className="grid gap-1 text-sm">
                 <span>Email</span>
                 <input
@@ -75,9 +76,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                 />
               </label>
 
-              <button formAction={login} className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-accent-strong">
-                Sign in
-              </button>
+              <SubmitButton />
             </form>
           </section>
         </div>
