@@ -43,8 +43,20 @@ const TYPE_LABELS: Record<string, string> = {
   file_upload: 'File Upload'
 }
 
+const TYPE_HINTS: Record<string, string> = {
+  single: 'Candidate picks one answer from the options.',
+  multi: 'Candidate can pick multiple answers.',
+  true_false: 'Candidate picks True or False. Auto-graded.',
+  short_answer: 'Candidate types a short text answer. Auto-graded by exact match.',
+  long_answer: 'Candidate writes a longer response. You grade this manually.',
+  fill_blank: 'Candidate fills in the missing word. Auto-graded by exact match.',
+  numerical: 'Candidate enters a number. Auto-graded with tolerance.',
+  file_upload: 'Candidate uploads a file (PDF, image, etc.). You grade this manually.'
+}
+
 function QuestionFormFields({ defaultValues }: { defaultValues?: Question }) {
   const [type, setType] = useState(defaultValues?.type || 'single')
+  const hint = TYPE_HINTS[type]
 
   return (
     <>
@@ -67,6 +79,11 @@ function QuestionFormFields({ defaultValues }: { defaultValues?: Question }) {
           <input name="marks" type="number" required defaultValue={defaultValues?.marks || 1} min="1" className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" />
         </div>
       </div>
+
+      {/* Candidate Experience Hint */}
+      {hint && (
+        <p className="text-xs text-text-muted italic px-1">{hint}</p>
+      )}
 
       {(type === 'single' || type === 'multi') && (
         <>
@@ -109,12 +126,88 @@ function QuestionFormFields({ defaultValues }: { defaultValues?: Question }) {
       )}
 
       {type === 'file_upload' && (
-        <div>
-          <label className="block text-sm font-medium text-text-muted mb-1">Allowed File Types (comma separated)</label>
-          <input name="file_types" defaultValue={parseArray(defaultValues?.file_types).join(', ')} className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" placeholder=".pdf, .docx, .zip" />
-        </div>
+        <FileTypePicker defaults={parseArray(defaultValues?.file_types)} />
       )}
     </>
+  )
+}
+
+const FILE_TYPE_OPTIONS = [
+  { value: '.pdf', label: 'PDF' },
+  { value: '.doc', label: 'DOC' },
+  { value: '.docx', label: 'DOCX' },
+  { value: '.txt', label: 'TXT' },
+  { value: '.jpg', label: 'JPG' },
+  { value: '.jpeg', label: 'JPEG' },
+  { value: '.png', label: 'PNG' },
+  { value: '.gif', label: 'GIF' },
+  { value: '.zip', label: 'ZIP' },
+  { value: '.csv', label: 'CSV' },
+  { value: '.xlsx', label: 'XLSX' },
+  { value: '.pptx', label: 'PPTX' },
+  { value: '.mp4', label: 'MP4' },
+  { value: '.py', label: 'PY' },
+  { value: '.js', label: 'JS' },
+  { value: '.cpp', label: 'C++' },
+]
+
+function FileTypePicker({ defaults }: { defaults: string[] }) {
+  const [selected, setSelected] = useState<string[]>(defaults.length > 0 ? defaults : [])
+  const [open, setOpen] = useState(false)
+  const allValues = FILE_TYPE_OPTIONS.map(o => o.value)
+  const allSelected = allValues.every(v => selected.includes(v))
+
+  function toggle(val: string) {
+    setSelected(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val])
+  }
+
+  function toggleAll() {
+    setSelected(allSelected ? [] : [...allValues])
+  }
+
+  return (
+    <div className="relative">
+      <label className="block text-sm font-medium text-text-muted mb-1">Allowed File Types</label>
+      <input type="hidden" name="file_types" value={selected.join(', ')} />
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full h-10 rounded-md border bg-white px-3 text-left text-sm outline-none ring-accent focus:ring-2 flex items-center justify-between"
+      >
+        <span className={selected.length > 0 ? 'text-text' : 'text-text-muted'}>
+          {selected.length === 0 ? 'All types allowed' : allSelected ? 'All types selected' : `${selected.length} type${selected.length > 1 ? 's' : ''} selected`}
+        </span>
+        <span className="text-text-muted text-xs">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full bg-white border rounded-lg shadow-lg max-h-56 overflow-y-auto">
+          {/* Select All */}
+          <label className="flex items-center gap-2.5 px-3 py-2 border-b cursor-pointer hover:bg-surface-soft transition">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleAll}
+              className="accent-accent w-3.5 h-3.5"
+            />
+            <span className="text-sm font-medium">Select All</span>
+          </label>
+
+          {FILE_TYPE_OPTIONS.map(opt => (
+            <label key={opt.value} className="flex items-center gap-2.5 px-3 py-1.5 cursor-pointer hover:bg-surface-soft transition">
+              <input
+                type="checkbox"
+                checked={selected.includes(opt.value)}
+                onChange={() => toggle(opt.value)}
+                className="accent-accent w-3.5 h-3.5"
+              />
+              <span className="text-sm">{opt.label}</span>
+              <span className="text-xs text-text-muted ml-auto">{opt.value}</span>
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 

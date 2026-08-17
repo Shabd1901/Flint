@@ -40,7 +40,12 @@ export default async function CandidateExams() {
       status: 'in_progress',
     }).select().single()
 
-    if (!error && attempt) {
+    if (error) {
+      console.error('[startExam] Error creating attempt:', error)
+      return
+    }
+
+    if (attempt) {
       redirect(`/candidate/exams/${examId}/take`)
     }
   }
@@ -97,6 +102,14 @@ export default async function CandidateExams() {
                     <a href={`/candidate/exams/${exam.id}/take`} className="block w-full text-center py-2 rounded-md bg-amber-500 text-white font-medium hover:bg-amber-600 transition">
                       Resume Exam
                     </a>
+                  ) : (exam.end_at && new Date() > new Date(exam.end_at)) ? (
+                    <div className="w-full text-center py-2 bg-surface-soft rounded-lg text-sm font-medium text-text-muted">
+                      Exam Window Closed
+                    </div>
+                  ) : (exam.start_at && new Date() < new Date(exam.start_at)) ? (
+                    <div className="w-full text-center py-2 bg-surface-soft rounded-lg text-sm font-medium text-text-muted">
+                      Starts: {new Date(exam.start_at).toLocaleString()}
+                    </div>
                   ) : (
                     <form action={startExam}>
                       <input type="hidden" name="exam_id" value={exam.id} />

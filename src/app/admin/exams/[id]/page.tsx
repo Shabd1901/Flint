@@ -3,7 +3,7 @@ import { Download, CheckCircle2, XCircle, Eye, EyeOff, ArrowLeft } from 'lucide-
 import { formatDateTime } from '@/utils/formatDate'
 import { QuestionManager } from './QuestionManager'
 import { ExamSettingsEditor } from './ExamSettingsEditor'
-import { updateExamStatus, toggleResultRelease } from './actions'
+import { updateExamStatus, toggleResultRelease, gradeExamAnswer } from './actions'
 import { DeleteExamButton } from './DeleteExamButton'
 import Link from 'next/link'
 
@@ -224,11 +224,11 @@ export default async function ExamDetails({ params }: { params: Promise<{ id: st
                               } else if (q.type === 'long_answer') {
                                 isCorrect = false // manual grading
                                 candDisplay = userAns?.text_answer || 'No Answer'
-                                correctDisplay = 'Manual Grade Required'
+                                correctDisplay = userAns?.marks_awarded !== undefined && userAns?.marks_awarded !== null ? `Graded: ${userAns.marks_awarded} pts` : 'Manual Grade Required'
                               } else if (q.type === 'file_upload') {
                                 isCorrect = false // manual grading
                                 candDisplay = userAns?.file_url ? 'File Uploaded' : 'No File'
-                                correctDisplay = 'Manual Grade Required'
+                                correctDisplay = userAns?.marks_awarded !== undefined && userAns?.marks_awarded !== null ? `Graded: ${userAns.marks_awarded} pts` : 'Manual Grade Required'
                               }
 
                               return (
@@ -240,9 +240,32 @@ export default async function ExamDetails({ params }: { params: Promise<{ id: st
                                         <CheckCircle2 size={14} /> +{q.marks} pts
                                       </span>
                                     ) : (q.type === 'long_answer' || q.type === 'file_upload') ? (
-                                      <span className="flex items-center gap-1 text-amber-600 font-semibold shrink-0">
-                                        Pending Review
-                                      </span>
+                                      userAns?.id ? (
+                                        <form action={gradeExamAnswer} className="flex items-center gap-2">
+                                          <input type="hidden" name="answer_id" value={userAns.id} />
+                                          <input type="hidden" name="attempt_id" value={attempt.id} />
+                                          <input type="hidden" name="exam_id" value={id} />
+                                          <div className="flex items-center gap-1">
+                                            <input 
+                                              type="number" 
+                                              name="marks" 
+                                              defaultValue={userAns.marks_awarded ?? ''}
+                                              max={q.marks} 
+                                              min={0} 
+                                              step="0.5" 
+                                              required
+                                              className="w-16 px-2 py-1 text-xs rounded border outline-none focus:border-accent bg-white"
+                                              placeholder={`/${q.marks}`}
+                                            />
+                                            <span className="text-text-muted text-xs font-semibold">/ {q.marks}</span>
+                                          </div>
+                                          <button type="submit" className="px-3 py-1 bg-accent text-white rounded text-xs font-semibold hover:bg-accent-strong transition">Save</button>
+                                        </form>
+                                      ) : (
+                                        <span className="flex items-center gap-1 text-rose-600 font-semibold shrink-0">
+                                          <XCircle size={14} /> 0 pts (No Answer)
+                                        </span>
+                                      )
                                     ) : (
                                       <span className="flex items-center gap-1 text-rose-600 font-semibold shrink-0">
                                         <XCircle size={14} /> 0 pts
