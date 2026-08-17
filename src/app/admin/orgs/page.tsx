@@ -39,9 +39,7 @@ export default async function AdminOrgs() {
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <form action={deleteOrg}>
                     <input type="hidden" name="id" value={org.id} />
-                    <button className="p-2 text-rose-500 hover:bg-rose-50 rounded-md transition" title="Delete Organization" onClick={(e) => {
-                      if (!confirm('Are you sure you want to delete this organization? All associated data will be lost.')) e.preventDefault()
-                    }}>
+                    <button className="p-2 text-rose-500 hover:bg-rose-50 rounded-md transition" title="Delete Organization">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </form>
