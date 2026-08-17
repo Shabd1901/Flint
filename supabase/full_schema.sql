@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 -- 3. Orgs Table
 CREATE TABLE IF NOT EXISTS orgs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    admin_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    admin_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     invite_code TEXT UNIQUE DEFAULT substr(md5(random()::text), 1, 8),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

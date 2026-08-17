@@ -1,7 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatDate, formatDateTime } from '@/utils/formatDate'
-import { deleteOrgAsMaintainer, unlinkAdminAsMaintainer } from './actions'
+import { unlinkAdminAsMaintainer } from './actions'
+import { DeleteOrgButton } from './DeleteOrgButton'
 
 export default async function MaintainerDashboard() {
   const supabase = await createClient()
@@ -132,12 +133,7 @@ export default async function MaintainerDashboard() {
                           Unlink
                         </button>
                       </form>
-                      <form action={deleteOrgAsMaintainer}>
-                        <input type="hidden" name="id" value={org.id} />
-                        <button className="px-2 py-1 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded text-xs transition font-medium">
-                          Delete
-                        </button>
-                      </form>
+                      <DeleteOrgButton id={org.id} name={org.name} />
                     </div>
                   </td>
                 </tr>

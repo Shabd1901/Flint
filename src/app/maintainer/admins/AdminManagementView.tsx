@@ -59,6 +59,7 @@ export function AdminManagementView({
   const [resetModalAdmin, setResetModalAdmin] = useState<AdminWithOrgs | null>(null)
   const [assignModalAdmin, setAssignModalAdmin] = useState<AdminWithOrgs | null>(null)
   const [deleteModalAdmin, setDeleteModalAdmin] = useState<AdminWithOrgs | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   // Form field states
   const [newPassword, setNewPassword] = useState('')
@@ -169,6 +170,7 @@ export function AdminManagementView({
       } else {
         setFeedback({ type: 'success', message: res.success || 'Admin account deleted!' })
         setDeleteModalAdmin(null)
+        setDeleteConfirmText('')
       }
     })
   }
@@ -356,7 +358,10 @@ export function AdminManagementView({
                       </button>
 
                       <button
-                        onClick={() => setDeleteModalAdmin(admin)}
+                        onClick={() => {
+                          setDeleteModalAdmin(admin)
+                          setDeleteConfirmText('')
+                        }}
                         title="Delete Admin Account"
                         className="p-1.5 rounded-md border text-text-muted hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 transition"
                       >
@@ -618,6 +623,19 @@ export function AdminManagementView({
               their owned organization structure.
             </div>
 
+            <div className="mt-4">
+              <label className="block text-xs font-medium text-text-muted mb-1">
+                Type <strong>DELETE</strong> to confirm
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="w-full h-9 rounded-md border bg-white px-3 text-sm focus:ring-2 focus:ring-rose-500 focus:outline-none"
+              />
+            </div>
+
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
                 type="button"
@@ -629,7 +647,7 @@ export function AdminManagementView({
               <button
                 type="button"
                 onClick={handleDeleteAdmin}
-                disabled={isPending}
+                disabled={isPending || deleteConfirmText !== 'DELETE'}
                 className="h-9 px-4 rounded-md bg-rose-600 text-sm font-medium text-white hover:bg-rose-700 transition disabled:opacity-50 flex items-center gap-1.5"
               >
                 {isPending ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={14} />}
