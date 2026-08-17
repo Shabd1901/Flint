@@ -21,8 +21,6 @@ import {
   createAdminAction,
   updateAdminPasswordAction,
   deleteAdminAction,
-  assignOrgAdminAction,
-  createOrgForAdminAction,
 } from './actions'
 
 export interface AdminWithOrgs {
@@ -57,14 +55,11 @@ export function AdminManagementView({
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [resetModalAdmin, setResetModalAdmin] = useState<AdminWithOrgs | null>(null)
-  const [assignModalAdmin, setAssignModalAdmin] = useState<AdminWithOrgs | null>(null)
   const [deleteModalAdmin, setDeleteModalAdmin] = useState<AdminWithOrgs | null>(null)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   // Form field states
   const [newPassword, setNewPassword] = useState('')
-  const [selectedOrgId, setSelectedOrgId] = useState('')
-  const [newOrgName, setNewOrgName] = useState('')
 
   const copyToClipboard = (id: string) => {
     navigator.clipboard.writeText(id)
@@ -113,46 +108,6 @@ export function AdminManagementView({
         setFeedback({ type: 'success', message: res.success || 'Password updated!' })
         setResetModalAdmin(null)
         setNewPassword('')
-      }
-    })
-  }
-
-  const handleAssignOrg = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!assignModalAdmin || !selectedOrgId) return
-
-    const formData = new FormData()
-    formData.append('adminId', assignModalAdmin.id)
-    formData.append('orgId', selectedOrgId)
-
-    startTransition(async () => {
-      const res = await assignOrgAdminAction(formData)
-      if (res.error) {
-        setFeedback({ type: 'error', message: res.error })
-      } else {
-        setFeedback({ type: 'success', message: res.success || 'Organization reassigned successfully!' })
-        setAssignModalAdmin(null)
-        setSelectedOrgId('')
-      }
-    })
-  }
-
-  const handleCreateOrgForAdmin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!assignModalAdmin || !newOrgName.trim()) return
-
-    const formData = new FormData()
-    formData.append('adminId', assignModalAdmin.id)
-    formData.append('orgName', newOrgName.trim())
-
-    startTransition(async () => {
-      const res = await createOrgForAdminAction(formData)
-      if (res.error) {
-        setFeedback({ type: 'error', message: res.error })
-      } else {
-        setFeedback({ type: 'success', message: res.success || 'Organization created!' })
-        setAssignModalAdmin(null)
-        setNewOrgName('')
       }
     })
   }
@@ -334,19 +289,6 @@ export function AdminManagementView({
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => {
-                          setAssignModalAdmin(admin)
-                          setSelectedOrgId('')
-                          setNewOrgName('')
-                        }}
-                        title="Manage Org Link"
-                        className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1.5 text-xs font-medium text-text-muted hover:border-accent/40 hover:bg-orange-50 hover:text-accent transition"
-                      >
-                        <Building2 size={14} />
-                        Link Org
-                      </button>
-
-                      <button
-                        onClick={() => {
                           setResetModalAdmin(admin)
                           setNewPassword('')
                         }}
@@ -524,82 +466,7 @@ export function AdminManagementView({
         </div>
       )}
 
-      {/* MANAGE / LINK ORG MODAL */}
-      {assignModalAdmin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="surface-card w-full max-w-lg p-6 relative shadow-xl">
-            <button
-              onClick={() => setAssignModalAdmin(null)}
-              className="absolute right-4 top-4 text-text-muted hover:text-text"
-            >
-              <X size={18} />
-            </button>
-
-            <h3 className="text-lg font-bold flex items-center gap-2">
-              <Building2 size={20} className="text-accent" />
-              Manage Organization for {assignModalAdmin.name}
-            </h3>
-            <p className="mt-1 text-xs text-text-muted">
-              Link an existing organization or create a brand new organization assigned to this Admin ID.
-            </p>
-
-            <div className="mt-5 space-y-6">
-              {/* Option 1: Reassign existing Org */}
-              <form onSubmit={handleAssignOrg} className="border-b pb-5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">
-                  Option 1: Assign Existing Organization
-                </label>
-                <div className="flex gap-2">
-                  <select
-                    value={selectedOrgId}
-                    onChange={(e) => setSelectedOrgId(e.target.value)}
-                    className="flex-1 h-10 rounded-md border bg-white px-3 text-sm focus:ring-2 focus:ring-accent focus:outline-none"
-                  >
-                    <option value="">Select Organization...</option>
-                    {allOrgs.map((org) => (
-                      <option key={org.id} value={org.id}>
-                        {org.name} {org.admin_id === assignModalAdmin.id ? '(Currently Assigned)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="submit"
-                    disabled={isPending || !selectedOrgId}
-                    className="h-10 px-4 rounded-md bg-accent text-xs font-semibold text-white hover:bg-accent-strong transition disabled:opacity-50 shrink-0"
-                  >
-                    Reassign Org
-                  </button>
-                </div>
-              </form>
-
-              {/* Option 2: Create new Org */}
-              <form onSubmit={handleCreateOrgForAdmin}>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">
-                  Option 2: Create & Link New Organization
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newOrgName}
-                    onChange={(e) => setNewOrgName(e.target.value)}
-                    placeholder="e.g. Stanford CS Department"
-                    className="flex-1 h-10 rounded-md border bg-white px-3 text-sm focus:ring-2 focus:ring-accent focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isPending || !newOrgName.trim()}
-                    className="h-10 px-4 rounded-md bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-700 transition disabled:opacity-50 shrink-0 flex items-center gap-1"
-                  >
-                    <Plus size={14} /> Create & Link
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* DELETE CONFIRMATION MODAL */}
+      {/* DELETE ADMIN MODAL */}
       {deleteModalAdmin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="surface-card w-full max-w-md p-6 relative shadow-xl border-rose-200">

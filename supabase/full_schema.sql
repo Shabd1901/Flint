@@ -46,6 +46,13 @@ CREATE TABLE IF NOT EXISTS orgs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 3.5 Org Admins Table (Junction)
+CREATE TABLE IF NOT EXISTS org_admins (
+    org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+    admin_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    PRIMARY KEY (org_id, admin_id)
+);
+
 -- 4. Enrollments Table
 CREATE TABLE IF NOT EXISTS enrollments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -199,6 +206,7 @@ CREATE TABLE IF NOT EXISTS code_submissions (
 -- =========================================================
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orgs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE org_admins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE exams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
@@ -225,7 +233,11 @@ $$;
 CREATE OR REPLACE FUNCTION is_org_admin(check_org_id UUID) RETURNS BOOLEAN
 LANGUAGE sql SECURITY DEFINER SET search_path = public
 AS $$
-  SELECT EXISTS (SELECT 1 FROM orgs WHERE id = check_org_id AND admin_id = auth.uid());
+  SELECT EXISTS (
+    SELECT 1 FROM orgs WHERE id = check_org_id AND admin_id = auth.uid()
+    UNION
+    SELECT 1 FROM org_admins WHERE org_id = check_org_id AND admin_id = auth.uid()
+  );
 $$;
 
 CREATE OR REPLACE FUNCTION is_enrolled(check_org_id UUID) RETURNS BOOLEAN
@@ -260,10 +272,20 @@ CREATE POLICY "Users access own profile" ON profiles FOR ALL USING (id = auth.ui
 
 -- Orgs
 DROP POLICY IF EXISTS "Admin access own orgs" ON orgs;
-CREATE POLICY "Admin access own orgs" ON orgs FOR ALL USING (admin_id = auth.uid());
+CREATE POLICY "Admin access own orgs" ON orgs FOR ALL USING (is_org_admin(id) OR get_user_role() = 'maintainer');
 
 DROP POLICY IF EXISTS "Candidate read orgs" ON orgs;
 CREATE POLICY "Candidate read orgs" ON orgs FOR SELECT USING (is_enrolled(id) OR invite_code IS NOT NULL);
+
+-- Org Admins
+DROP POLICY IF EXISTS "Admins can view their org admins" ON org_admins;
+CREATE POLICY "Admins can view their org admins" ON org_admins FOR SELECT USING (is_org_admin(org_id) OR get_user_role() = 'maintainer');
+
+DROP POLICY IF EXISTS "Admins can insert org admins" ON org_admins;
+CREATE POLICY "Admins can insert org admins" ON org_admins FOR INSERT WITH CHECK (is_org_admin(org_id) OR get_user_role() = 'maintainer');
+
+DROP POLICY IF EXISTS "Admins can delete org admins" ON org_admins;
+CREATE POLICY "Admins can delete org admins" ON org_admins FOR DELETE USING (is_org_admin(org_id) OR get_user_role() = 'maintainer');
 
 -- Enrollments
 DROP POLICY IF EXISTS "Admin access enrollments" ON enrollments;

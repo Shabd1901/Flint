@@ -164,3 +164,51 @@ export async function createOrgForAdminAction(formData: FormData) {
     return { error: err.message || 'An error occurred while creating organization.' }
   }
 }
+
+export async function deleteOrgAction(formData: FormData) {
+  try {
+    await checkMaintainer()
+    const orgId = formData.get('orgId') as string
+
+    if (!orgId) {
+      return { error: 'Organization ID is required.' }
+    }
+
+    const adminClient = createAdminClient()
+    const { error } = await adminClient.from('orgs').delete().eq('id', orgId)
+
+    if (error) {
+      return { error: error.message }
+    }
+
+    revalidatePath('/maintainer/admins')
+    revalidatePath('/maintainer')
+    return { success: 'Organization deleted successfully.' }
+  } catch (err: any) {
+    return { error: err.message || 'An error occurred while deleting organization.' }
+  }
+}
+
+export async function unlinkAdminAction(formData: FormData) {
+  try {
+    await checkMaintainer()
+    const orgId = formData.get('orgId') as string
+
+    if (!orgId) {
+      return { error: 'Organization ID is required.' }
+    }
+
+    const adminClient = createAdminClient()
+    const { error } = await adminClient.from('orgs').update({ admin_id: null }).eq('id', orgId)
+
+    if (error) {
+      return { error: error.message }
+    }
+
+    revalidatePath('/maintainer/admins')
+    revalidatePath('/maintainer')
+    return { success: 'Admin unlinked from organization successfully.' }
+  } catch (err: any) {
+    return { error: err.message || 'An error occurred while unlinking admin.' }
+  }
+}

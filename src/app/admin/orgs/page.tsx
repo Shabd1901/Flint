@@ -1,14 +1,17 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import { createOrg, deleteOrg, updateOrg } from './actions'
-import { Building, Trash2, Edit2, Key } from 'lucide-react'
+import { createOrg } from './actions'
+import { AdminOrgCard } from './AdminOrgCard'
 
 export default async function AdminOrgs() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: orgs } = await supabase.from('orgs').select('*').order('created_at', { ascending: false })
+  const { data: orgs } = await supabase
+    .from('orgs')
+    .select('*, org_admins(admin_id, profiles(name, email))')
+    .order('created_at', { ascending: false })
   
   return (
     <div className="container-page py-6 md:py-8 space-y-6 max-w-5xl">
@@ -23,28 +26,7 @@ export default async function AdminOrgs() {
         <div className="space-y-4">
           {orgs && orgs.length > 0 ? (
             orgs.map(org => (
-              <div key={org.id} className="surface-card p-5 group flex justify-between items-center">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Building className="w-5 h-5 text-accent" />
-                    <h2 className="text-lg font-semibold">{org.name}</h2>
-                  </div>
-                  <div className="mt-2 flex items-center gap-2 text-sm text-text-muted">
-                    <Key className="w-4 h-4" />
-                    <span>Invite Code:</span>
-                    <code className="bg-surface-soft px-1.5 rounded font-mono text-xs">{org.invite_code}</code>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <form action={deleteOrg}>
-                    <input type="hidden" name="id" value={org.id} />
-                    <button className="p-2 text-rose-500 hover:bg-rose-50 rounded-md transition" title="Delete Organization">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </form>
-                </div>
-              </div>
+              <AdminOrgCard key={org.id} org={org} currentUserId={user.id} />
             ))
           ) : (
             <div className="p-8 border border-line border-dashed rounded-xl text-center text-text-muted">

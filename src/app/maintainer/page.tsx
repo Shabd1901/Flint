@@ -1,8 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatDate, formatDateTime } from '@/utils/formatDate'
-import { unlinkAdminAsMaintainer } from './actions'
-import { DeleteOrgButton } from './DeleteOrgButton'
 
 export default async function MaintainerDashboard() {
   const supabase = await createClient()
@@ -115,32 +113,20 @@ export default async function MaintainerDashboard() {
                 <th className="py-2">Admin</th>
                 <th className="py-2">Invite Code</th>
                 <th className="py-2">Created at</th>
-                <th className="py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {orgs?.map((org: any) => (
-                <tr key={org.id} className="border-b hover:bg-surface-soft/70 group">
+                <tr key={org.id} className="border-b hover:bg-surface-soft/70">
                   <td className="py-2 font-medium">{org.name}</td>
                   <td className="py-2 text-text-muted">{org.profiles ? `${org.profiles.name} (${org.profiles.email})` : <span className="italic">Unlinked</span>}</td>
                   <td className="py-2"><code className="rounded bg-surface-soft px-2 py-0.5 text-xs font-mono">{org.invite_code}</code></td>
                   <td className="py-2 text-text-muted" suppressHydrationWarning>{formatDate(org.created_at)}</td>
-                  <td className="py-2 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="flex justify-end gap-2">
-                      <form action={unlinkAdminAsMaintainer}>
-                        <input type="hidden" name="id" value={org.id} />
-                        <button className="px-2 py-1 bg-surface-soft hover:bg-line rounded text-xs transition font-medium" disabled={!org.profiles}>
-                          Unlink
-                        </button>
-                      </form>
-                      <DeleteOrgButton id={org.id} name={org.name} />
-                    </div>
-                  </td>
                 </tr>
               ))}
               {(!orgs || orgs.length === 0) && (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-text-muted">No organizations found.</td>
+                  <td colSpan={4} className="py-6 text-center text-text-muted">No organizations found.</td>
                 </tr>
               )}
             </tbody>
