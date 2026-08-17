@@ -2,11 +2,11 @@
   "crons": [
     {
       "path": "/api/exams/cron-submit",
-      "schedule": "* * * * *"
+      "schedule": "0 5 * * *"
     },
     {
       "path": "/api/contests/cron-submit",
-      "schedule": "* * * * *"
+      "schedule": "0 5 * * *"
     }
   ]
 }
