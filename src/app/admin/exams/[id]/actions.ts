@@ -51,7 +51,13 @@ export async function updateQuestion(questionId: string, examId: string, formDat
   const fileTypesRaw = formData.get('file_types') as string
   const file_types = fileTypesRaw ? fileTypesRaw.split(',').map(o => o.trim()).filter(Boolean) : []
 
-  await s.from('questions').update({
+  const { data: { user } } = await s.auth.getUser()
+  if (!user) return
+
+  const { data: exam } = await s.from('exams').select('status').eq('id', examId).single()
+  const { data: oldQ } = await s.from('questions').select('*').eq('id', questionId).single()
+
+  const newState = {
     text: formData.get('question_text'),
     type,
     options: options.length > 0 ? options : null,
@@ -62,7 +68,19 @@ export async function updateQuestion(questionId: string, examId: string, formDat
     max_words: formData.get('max_words') ? Number(formData.get('max_words')) : null,
     file_types: file_types.length > 0 ? file_types : null,
     marks: Number(formData.get('marks')) || 1
-  }).eq('id', questionId)
+  }
+
+  await s.from('questions').update(newState).eq('id', questionId)
+
+  // Audit trail for edits on published exams
+  if (exam?.status === 'published' && oldQ) {
+    await s.from('question_edits').insert({
+      question_id: questionId,
+      admin_id: user.id,
+      previous_state: oldQ,
+      new_state: newState
+    })
+  }
 
   revalidatePath(`/admin/exams/${examId}`)
 }
@@ -131,3 +149,97 @@ export async function deleteExamFromDetail(examId: string) {
   revalidatePath('/admin/exams')
   redirect('/admin/exams')
 }
+
+export async function importQuestions(examId: string, questions: any[]) {
+  const s = await createClient()
+
+  const { data: { user } } = await s.auth.getUser()
+  if (!user) return
+
+  const toInsert = questions.map(q => ({
+    exam_id: examId,
+    text: q.text,
+    type: q.type || 'single',
+    options: q.options || null,
+    correct_options: q.correct_options || null,
+    correct_text: q.correct_text || null,
+    correct_number: q.correct_number ? Number(q.correct_number) : null,
+    tolerance: q.tolerance ? Number(q.tolerance) : null,
+    max_words: q.max_words ? Number(q.max_words) : null,
+    file_types: q.file_types || null,
+    marks: Number(q.marks) || 1
+  }))
+
+  await s.from('questions').insert(toInsert)
+  revalidatePath(`/admin/exams/${examId}`)
+}
+
+export async function importQuestionsCSV(examId: string, csvText: string) {
+  const s = await createClient()
+  const { data: { user } } = await s.auth.getUser()
+  if (!user) return
+
+  // Basic CSV parser handling quotes
+  const lines: string[] = []
+  let currentLine = ''
+  let inQuotes = false
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i]
+    if (char === '"') inQuotes = !inQuotes
+    else if (char === '\n' && !inQuotes) {
+      lines.push(currentLine)
+      currentLine = ''
+      continue
+    }
+    currentLine += char
+  }
+  if (currentLine) lines.push(currentLine)
+
+  const toInsert = []
+  // Skip header line
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim()
+    if (!line) continue
+
+    const cols: string[] = []
+    let currentCol = ''
+    inQuotes = false
+    for (let j = 0; j < line.length; j++) {
+      const char = line[j]
+      if (char === '"') inQuotes = !inQuotes
+      else if (char === ',' && !inQuotes) {
+        cols.push(currentCol.trim())
+        currentCol = ''
+        continue
+      } else {
+        currentCol += char
+      }
+    }
+    cols.push(currentCol.trim())
+
+    const type = cols[0]?.toLowerCase() || 'single'
+    const text = cols[1] || ''
+    const optionsRaw = cols[2] || ''
+    const correctRaw = cols[3] || ''
+    const marks = Number(cols[4]) || 1
+
+    const options = optionsRaw ? optionsRaw.split(';').map(o => o.trim()).filter(Boolean) : null
+    const correct_options = correctRaw ? correctRaw.split(';').map(o => o.trim()).filter(Boolean) : null
+
+    toInsert.push({
+      exam_id: examId,
+      type,
+      text,
+      options,
+      correct_options,
+      correct_text: type === 'short_answer' ? correctRaw : null,
+      marks
+    })
+  }
+
+  if (toInsert.length > 0) {
+    await s.from('questions').insert(toInsert)
+    revalidatePath(`/admin/exams/${examId}`)
+  }
+}
+

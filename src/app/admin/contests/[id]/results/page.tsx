@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { Download, Trophy, Clock, Code2 } from 'lucide-react'
+import { PlagiarismPanel } from './PlagiarismPanel'
 
 export default async function ContestResults({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -221,6 +222,9 @@ export default async function ContestResults({ params }: { params: Promise<{ id:
           </table>
         </div>
       </section>
+
+      {/* Plagiarism Detection */}
+      <PlagiarismPanel contestId={id} />
     </div>
   )
 }

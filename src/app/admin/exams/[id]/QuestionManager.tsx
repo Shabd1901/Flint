@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { Trash2, Pencil, X, Check, Plus } from 'lucide-react'
-import { addQuestion, updateQuestion, deleteQuestion } from './actions'
+import { useState, useTransition, useRef } from 'react'
+import { Trash2, Pencil, X, Check, Plus, Upload } from 'lucide-react'
+import { addQuestion, updateQuestion, deleteQuestion, importQuestionsCSV } from './actions'
 
 function parseArray(val: any): string[] {
   if (!val) return []
@@ -215,6 +215,24 @@ export function QuestionManager({ questions, examId }: { questions: Question[], 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [showAddForm, setShowAddForm] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const text = event.target?.result as string
+      if (text) {
+        startTransition(async () => {
+          await importQuestionsCSV(examId, text)
+          if (fileInputRef.current) fileInputRef.current.value = ''
+        })
+      }
+    }
+    reader.readAsText(file)
+  }
 
   function handleDelete(questionId: string) {
     if (!confirm('Delete this question? This cannot be undone.')) return
@@ -241,12 +259,29 @@ export function QuestionManager({ questions, examId }: { questions: Question[], 
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-text-muted">Questions ({questions?.length || 0})</h2>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-strong transition"
-        >
-          {showAddForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> Add Question</>}
-        </button>
+        <div className="flex gap-2">
+          <input 
+            type="file" 
+            accept=".csv" 
+            className="hidden" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isPending}
+            className="inline-flex items-center gap-1.5 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-semibold text-text hover:bg-surface-soft transition disabled:opacity-50"
+            title="CSV Format: Type, Text, Options(separated by ;), Correct Options(separated by ;), Marks"
+          >
+            <Upload size={14} /> Import CSV
+          </button>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-strong transition"
+          >
+            {showAddForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> Add Question</>}
+          </button>
+        </div>
       </div>
 
       {showAddForm && (

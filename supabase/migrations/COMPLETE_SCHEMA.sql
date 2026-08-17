@@ -81,7 +81,8 @@ CREATE TABLE exam_attempts (
     violation_score NUMERIC DEFAULT 0,
     status attempt_status NOT NULL DEFAULT 'in_progress',
     active_session_token TEXT,
-    last_heartbeat TIMESTAMPTZ
+    last_heartbeat TIMESTAMPTZ,
+    proctor_messages JSONB DEFAULT '[]'::jsonb
 );
 
 CREATE TABLE exam_answers (
@@ -151,7 +152,8 @@ CREATE TABLE contest_attempts (
     submitted_at TIMESTAMPTZ,
     status attempt_status NOT NULL DEFAULT 'in_progress',
     active_session_token TEXT,
-    last_heartbeat TIMESTAMPTZ
+    last_heartbeat TIMESTAMPTZ,
+    proctor_messages JSONB DEFAULT '[]'::jsonb
 );
 
 CREATE TABLE violation_events (
@@ -192,6 +194,7 @@ ALTER TABLE problems ENABLE ROW LEVEL SECURITY;
 ALTER TABLE test_cases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contest_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE code_submissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE question_edits ENABLE ROW LEVEL SECURITY;
 
 -- 5. Helper Functions for RLS
 CREATE OR REPLACE FUNCTION get_user_role() RETURNS user_role
@@ -269,6 +272,17 @@ CREATE POLICY "Candidate read questions" ON questions FOR SELECT USING (
     )
 );
 
+-- question_edits
+CREATE POLICY "Admin read question edits" ON question_edits FOR SELECT USING (
+  EXISTS (
+    SELECT 1 FROM questions 
+    JOIN exams ON exams.id = questions.exam_id 
+    JOIN orgs ON orgs.id = exams.org_id 
+    WHERE questions.id = question_edits.question_id 
+    AND orgs.admin_id = auth.uid()
+  )
+);
+
 -- exam_attempts
 CREATE POLICY "Admin read exam_attempts" ON exam_attempts FOR SELECT USING (
     EXISTS (SELECT 1 FROM exams WHERE exams.id = exam_id AND is_org_admin(exams.org_id))
@@ -303,7 +317,7 @@ CREATE POLICY "Admin read violation_events" ON violation_events FOR SELECT USING
   (
     contest_attempt_id IS NOT NULL AND EXISTS (
       SELECT 1 FROM contest_attempts
-      JOIN contests ON contests.id = contest_attempts.contest_id
+      JOIN contests ON contests.id = contest_attempt_id
       JOIN orgs ON orgs.id = contests.org_id
       WHERE contest_attempts.id = violation_events.contest_attempt_id
       AND orgs.admin_id = auth.uid()

@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { ExamTakeWorkspace } from './ExamTakeWorkspace'
 import { logViolation, heartbeatSession } from './actions'
+import { shuffleArray } from '@/utils/random'
 
 function parseArray(val: any): string[] {
   if (!val) return []
@@ -23,7 +24,7 @@ export default async function ExamTake({ params }: { params: Promise<{ id: strin
   const { data: { user } } = await supabase.auth.getUser()
 
   const { data: attempt } = await supabase.from('exam_attempts')
-    .select('*, exams(duration_minutes)')
+    .select('*, exams(duration_minutes, randomize)')
     .eq('exam_id', id)
     .eq('candidate_id', user!.id)
     .single()
@@ -39,6 +40,11 @@ export default async function ExamTake({ params }: { params: Promise<{ id: strin
     .select('id, text, type, options, max_words, file_types')
     .eq('exam_id', id)
     .order('created_at', { ascending: true })
+
+  let finalQuestions = questions || []
+  if ((attempt.exams as any)?.randomize) {
+    finalQuestions = shuffleArray([...finalQuestions], attempt.id)
+  }
 
   // Fetch any existing answers
   const { data: answers } = await supabase.from('exam_answers').select('*').eq('attempt_id', attempt.id)
@@ -178,7 +184,7 @@ export default async function ExamTake({ params }: { params: Promise<{ id: strin
     <ExamTakeWorkspace
       attempt={attempt}
       durationMinutes={durationMinutes}
-      questions={questions || []}
+      questions={finalQuestions}
       answersMap={answersMap}
       submitExam={submitExam}
       saveAnswer={saveAnswer}

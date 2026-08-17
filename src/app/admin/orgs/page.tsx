@@ -1,7 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { createOrg, deleteOrg, updateOrg } from './actions'
-import { Building, Trash2, Edit2, Key } from 'lucide-react'
+import { Building, Trash2, Edit2, Key, Users } from 'lucide-react'
+import Link from 'next/link'
 
 export default async function AdminOrgs() {
   const supabase = await createClient()
@@ -37,6 +38,9 @@ export default async function AdminOrgs() {
                 </div>
 
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Link href={`/admin/orgs/${org.id}`} className="p-2 text-text-muted hover:text-accent hover:bg-surface-soft rounded-md transition" title="Manage Roster">
+                    <Users className="w-4 h-4" />
+                  </Link>
                   <form action={deleteOrg}>
                     <input type="hidden" name="id" value={org.id} />
                     <button className="p-2 text-rose-500 hover:bg-rose-50 rounded-md transition" title="Delete Organization">

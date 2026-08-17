@@ -1,25 +1,14 @@
 import { createClient } from '@/utils/supabase/server'
-import { Download, CheckCircle2, XCircle, Eye, EyeOff, ArrowLeft } from 'lucide-react'
+import { Download, CheckCircle2, XCircle, Eye, EyeOff, ArrowLeft, BarChart2, Radio, History } from 'lucide-react'
 import { formatDateTime } from '@/utils/formatDate'
 import { QuestionManager } from './QuestionManager'
 import { ExamSettingsEditor } from './ExamSettingsEditor'
 import { updateExamStatus, toggleResultRelease, gradeExamAnswer } from './actions'
 import { DeleteExamButton } from './DeleteExamButton'
 import Link from 'next/link'
+import { evaluateAnswer } from '@/utils/grade'
+import { shuffleArray } from '@/utils/random'
 
-function parseArray(val: any): string[] {
-  if (!val) return []
-  if (Array.isArray(val)) return val.map(String)
-  if (typeof val === 'string') {
-    try {
-      const parsed = JSON.parse(val)
-      return Array.isArray(parsed) ? parsed.map(String) : [String(parsed)]
-    } catch {
-      return [val]
-    }
-  }
-  return []
-}
 
 export default async function ExamDetails({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -93,6 +82,33 @@ export default async function ExamDetails({ params }: { params: Promise<{ id: st
             <Download size={16} />
             Export CSV
           </a>
+
+          {/* Audit Trail */}
+          <Link
+            href={`/admin/exams/${id}/audit`}
+            className="inline-flex items-center gap-2 rounded-md bg-white border px-4 py-2 text-sm font-semibold hover:bg-surface-soft transition"
+          >
+            <History size={16} />
+            Audit Log
+          </Link>
+
+          {/* Item Analysis */}
+          <Link
+            href={`/admin/exams/${id}/analysis`}
+            className="inline-flex items-center gap-2 rounded-md bg-white border px-4 py-2 text-sm font-semibold hover:bg-surface-soft transition"
+          >
+            <BarChart2 size={16} />
+            Item Analysis
+          </Link>
+
+          {/* Live Proctor Console */}
+          <Link
+            href={`/admin/exams/${id}/proctor`}
+            className="inline-flex items-center gap-2 rounded-md bg-rose-50 border border-rose-200 text-rose-800 px-4 py-2 text-sm font-semibold hover:bg-rose-100 transition"
+          >
+            <Radio size={16} className="animate-pulse" />
+            Live Proctor Console
+          </Link>
 
           {/* Status Dropdown */}
           <form action={async (fd: FormData) => {
@@ -191,45 +207,11 @@ export default async function ExamDetails({ params }: { params: Promise<{ id: st
                           <h4 className="text-xs font-semibold uppercase tracking-wider text-text-muted">Question-by-Question Response Review</h4>
                           
                           <div className="space-y-3">
-                            {questions?.map((q: any, qIdx: number) => {
+                            {(() => {
+                              const candQuestions = exam?.randomize ? shuffleArray([...(questions || [])], attempt.id) : questions
+                              return candQuestions?.map((q: any, qIdx: number) => {
                               const userAns = candidateAnsMap.get(q.id)
-                              
-                              let isCorrect = false
-                              let candDisplay = 'No Answer'
-                              let correctDisplay = 'N/A'
-                              
-                              if (q.type === 'single' || q.type === 'multi') {
-                                const selected = parseArray(userAns?.selected_options)
-                                const correct = parseArray(q.correct_options)
-                                isCorrect = correct.length > 0 && correct.length === selected.length && correct.every((c: string) => selected.includes(c))
-                                candDisplay = selected.length > 0 ? selected.join(', ') : 'No Answer Selected'
-                                correctDisplay = correct.join(', ')
-                              } else if (q.type === 'true_false') {
-                                const selected = parseArray(userAns?.selected_options)[0]
-                                const correct = parseArray(q.correct_options)[0]
-                                isCorrect = !!correct && !!selected && correct === selected
-                                candDisplay = selected || 'No Answer'
-                                correctDisplay = correct || 'N/A'
-                              } else if (q.type === 'short_answer' || q.type === 'fill_blank') {
-                                isCorrect = !!(q.correct_text && userAns?.text_answer && (q.correct_text.trim().toLowerCase() === userAns.text_answer.trim().toLowerCase()))
-                                candDisplay = userAns?.text_answer || 'No Answer'
-                                correctDisplay = q.correct_text || 'N/A'
-                              } else if (q.type === 'numerical') {
-                                if (q.correct_number !== null && userAns?.number_answer !== null && userAns?.number_answer !== undefined) {
-                                  const diff = Math.abs(q.correct_number - userAns.number_answer)
-                                  isCorrect = diff <= (q.tolerance || 0)
-                                }
-                                candDisplay = userAns?.number_answer?.toString() || 'No Answer'
-                                correctDisplay = `${q.correct_number ?? 'N/A'} ± ${q.tolerance ?? 0}`
-                              } else if (q.type === 'long_answer') {
-                                isCorrect = false // manual grading
-                                candDisplay = userAns?.text_answer || 'No Answer'
-                                correctDisplay = userAns?.marks_awarded !== undefined && userAns?.marks_awarded !== null ? `Graded: ${userAns.marks_awarded} pts` : 'Manual Grade Required'
-                              } else if (q.type === 'file_upload') {
-                                isCorrect = false // manual grading
-                                candDisplay = userAns?.file_url ? 'File Uploaded' : 'No File'
-                                correctDisplay = userAns?.marks_awarded !== undefined && userAns?.marks_awarded !== null ? `Graded: ${userAns.marks_awarded} pts` : 'Manual Grade Required'
-                              }
+                              const { isCorrect, candDisplay, correctDisplay } = evaluateAnswer(q, userAns)
 
                               return (
                                 <div key={q.id} className="p-3 bg-white rounded-lg border text-xs space-y-2">
@@ -291,7 +273,8 @@ export default async function ExamDetails({ params }: { params: Promise<{ id: st
                                   </div>
                                 </div>
                               )
-                            })}
+                            })
+                            })()}
                           </div>
                         </div>
                       </details>

@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ShieldAlert, Maximize2, AlertTriangle, X } from 'lucide-react'
+import { ShieldAlert, Maximize2, AlertTriangle, X, MessageSquareWarning } from 'lucide-react'
+import { createClient } from '@/utils/supabase/client'
+
 
 const VIOLATION_LABELS: Record<string, string> = {
   tab_switch: 'Tab Switch Detected',
@@ -30,6 +32,40 @@ export function ProctoringWrapper({
   const [isProctoringStarted, setIsProctoringStarted] = useState(false)
   const [warningCount, setWarningCount] = useState(0)
   const [activeWarning, setActiveWarning] = useState<string | null>(null)
+  const [proctorMessage, setProctorMessage] = useState<{text: string, time: string} | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    
+    // Subscribe to candidate's own exam_attempt changes
+    const sub = supabase.channel(`attempt-${attemptId}`)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'exam_attempts', 
+        filter: `id=eq.${attemptId}` 
+      }, (payload) => {
+        // 1. Force Submit
+        if (payload.new.status === 'submitted') {
+          window.location.reload() // Will redirect out
+        }
+        
+        // 2. Proctor Messages
+        if (payload.new.proctor_messages && Array.isArray(payload.new.proctor_messages)) {
+          const messages = payload.new.proctor_messages
+          if (messages.length > 0) {
+            const latest = messages[messages.length - 1]
+            if (latest.sender === 'proctor') {
+              setProctorMessage({ text: latest.text, time: latest.timestamp })
+            }
+          }
+        }
+      }).subscribe()
+      
+    return () => {
+      sub.unsubscribe()
+    }
+  }, [attemptId])
 
   const handleStartFullscreen = () => {
     document.documentElement.requestFullscreen()
