@@ -1,5 +1,5 @@
 'use client'
-import { LayoutDashboard, CheckSquare, FileText, Code2 } from 'lucide-react'
+import { LayoutDashboard, CheckSquare, FileText, Code2, Building } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 
 export function AdminSidebar({ signOutAction }: { signOutAction: () => Promise<void> }) {
@@ -9,6 +9,7 @@ export function AdminSidebar({ signOutAction }: { signOutAction: () => Promise<v
       role="Admin"
       navItems={[
         { label: 'Overview', href: '/admin', icon: LayoutDashboard, exact: true },
+        { label: 'Organizations', href: '/admin/orgs', icon: Building },
         { label: 'Exams', href: '/admin/exams', icon: FileText },
         { label: 'Assignments', href: '/admin/assignments', icon: CheckSquare },
         { label: 'Coding Contests', href: '/admin/contests', icon: Code2 },

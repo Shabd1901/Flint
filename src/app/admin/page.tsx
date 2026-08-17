@@ -30,7 +30,7 @@ export default async function AdminDashboard() {
     const { data: orgExams } = await supabase.from('exams').select('id, title').eq('org_id', org.id)
     const examMap = new Map(orgExams?.map(e => [e.id, e.title]) || [])
     const examIds = orgExams?.map(e => e.id) || []
-    
+
     if (examIds.length > 0) {
       const adminClient = createAdminClient()
 
@@ -126,7 +126,7 @@ export default async function AdminDashboard() {
             Monitor active sessions, review high-risk candidates, and manage your organization's assessments.
           </p>
         </div>
-        
+
         {org && (
           <div className="flex items-center gap-4 bg-white border shadow-sm px-4 py-2 rounded-lg">
             <div className="flex items-center gap-2">
@@ -148,13 +148,13 @@ export default async function AdminDashboard() {
           <h2 className="text-xl font-semibold">Create Your Organization</h2>
           <p className="text-sm text-text-muted mt-2 mb-6">Initialize your tenant to start creating exams, inviting candidates, and monitoring integrity.</p>
           <form action={createOrg} className="flex flex-col gap-3">
-            <input name="org_name" required className="h-11 rounded-md border bg-white px-4 outline-none ring-accent focus:ring-2 w-full text-center" placeholder="e.g. Acme Corp Hiring" />
-            <button className="h-11 rounded-md bg-accent px-6 font-semibold text-white hover:bg-accent-strong transition shadow-sm hover:-translate-y-0.5">Initialize Tenant</button>
+            <input name="org_name" required className="h-11 rounded-md border bg-white px-4 outline-none ring-accent focus:ring-2 w-full text-center" placeholder="e.g. Classroom 1" />
+            <button className="h-11 rounded-md bg-accent px-6 font-semibold text-white hover:bg-accent-strong transition shadow-sm hover:-translate-y-0.5">Create Organisation</button>
           </form>
         </section>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-start">
-          
+
           <div className="space-y-6">
             {/* Live Metrics Grid */}
             <section className="grid gap-4 sm:grid-cols-3">
@@ -167,7 +167,7 @@ export default async function AdminDashboard() {
                   <p className="font-mono text-4xl font-semibold tracking-tight">{candidateCount}</p>
                 </div>
               </article>
-              
+
               <article className="surface-card p-5 relative overflow-hidden group border-accent/20 bg-accent/5">
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity text-accent">
                   <Activity className="w-12 h-12" />
@@ -183,7 +183,7 @@ export default async function AdminDashboard() {
                   <p className="font-mono text-4xl font-semibold tracking-tight text-accent">{activeSessionsCount}</p>
                 </div>
               </article>
-              
+
               <article className="surface-card p-5 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                   <ShieldCheck className="w-12 h-12" />
