@@ -73,6 +73,32 @@ export async function deleteQuestion(questionId: string, examId: string) {
   revalidatePath(`/admin/exams/${examId}`)
 }
 
+export async function gradeExamAnswer(formData: FormData) {
+  const s = await createClient()
+  
+  const answerId = formData.get('answer_id') as string
+  const attemptId = formData.get('attempt_id') as string
+  const marks = Number(formData.get('marks')) || 0
+  const examId = formData.get('exam_id') as string
+
+  // 1. Fetch old marks awarded (if any) to calculate delta
+  const { data: answer } = await s.from('exam_answers').select('marks_awarded').eq('id', answerId).single()
+  const oldMarks = Number(answer?.marks_awarded || 0)
+
+  // 2. Update the answer with new marks
+  await s.from('exam_answers').update({ marks_awarded: marks }).eq('id', answerId)
+
+  // 3. Fetch current attempt score and apply the delta
+  const { data: attempt } = await s.from('exam_attempts').select('score').eq('id', attemptId).single()
+  const currentTotal = Number(attempt?.score || 0)
+  const newTotal = currentTotal - oldMarks + marks
+
+  // 4. Update attempt
+  await s.from('exam_attempts').update({ score: newTotal }).eq('id', attemptId)
+
+  revalidatePath(`/admin/exams/${examId}`)
+}
+
 export async function updateExamSettings(examId: string, formData: FormData) {
   const s = await createClient()
   await s.from('exams').update({
