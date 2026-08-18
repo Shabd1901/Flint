@@ -1,6 +1,8 @@
 -- ============================================================================
 -- FLINT — ALL-IN-ONE MASTER DATABASE MIGRATION SCRIPT
--- Paste this entire file into Supabase SQL Editor (New Query) and click Run.
+-- Copy & paste this entire script into your Supabase SQL Editor (New Query) and click Run.
+-- It resets schema public cleanly and builds all tables, enums, indexes, functions, 
+-- storage buckets, and non-recursive RLS policies for every role and feature.
 -- ============================================================================
 
 -- 1. Reset Public Schema (Clean slate)
@@ -13,7 +15,7 @@ GRANT ALL ON SCHEMA public TO anon;
 GRANT ALL ON SCHEMA public TO authenticated;
 GRANT ALL ON SCHEMA public TO service_role;
 
--- 2. Create Enums
+-- 2. Create Custom Enums
 CREATE TYPE user_role AS ENUM ('maintainer', 'admin', 'candidate');
 CREATE TYPE exam_status AS ENUM ('draft', 'live', 'closed');
 CREATE TYPE question_type AS ENUM ('single', 'multi', 'true_false', 'short_answer', 'long_answer', 'fill_blank', 'numerical', 'file_upload');
@@ -21,6 +23,8 @@ CREATE TYPE attempt_status AS ENUM ('in_progress', 'submitted', 'auto_submitted'
 CREATE TYPE violation_type AS ENUM ('tab_switch', 'fullscreen_exit', 'blur', 'multi_session', 'devtools');
 
 -- 3. Core Tables
+
+-- Profiles Table (Linked to Supabase Auth)
 CREATE TABLE profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     role user_role NOT NULL,
@@ -29,20 +33,23 @@ CREATE TABLE profiles (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Organizations Table
 CREATE TABLE orgs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    admin_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    admin_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
     invite_code TEXT UNIQUE DEFAULT substr(md5(random()::text), 1, 8),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Co-Admins Table
 CREATE TABLE org_admins (
     org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
     admin_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     PRIMARY KEY (org_id, admin_id)
 );
 
+-- Enrollments Table (Candidate <-> Org)
 CREATE TABLE enrollments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
@@ -51,6 +58,7 @@ CREATE TABLE enrollments (
     UNIQUE (org_id, candidate_id)
 );
 
+-- Exams Table
 CREATE TABLE exams (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
@@ -66,22 +74,24 @@ CREATE TABLE exams (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Exam Questions Table
 CREATE TABLE questions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     exam_id UUID NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
     text TEXT NOT NULL,
     type question_type NOT NULL,
-    options JSONB NOT NULL,
-    correct_options JSONB NOT NULL,
+    options JSONB NOT NULL DEFAULT '[]'::jsonb,
+    correct_options JSONB NOT NULL DEFAULT '[]'::jsonb,
     correct_text TEXT,
     correct_number NUMERIC,
     tolerance NUMERIC,
     max_words INT,
     file_types TEXT[],
-    marks NUMERIC NOT NULL,
+    marks NUMERIC NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Exam Attempts Table
 CREATE TABLE exam_attempts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     exam_id UUID NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
@@ -95,6 +105,7 @@ CREATE TABLE exam_attempts (
     last_heartbeat TIMESTAMPTZ
 );
 
+-- Exam Answers Table
 CREATE TABLE exam_answers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     attempt_id UUID NOT NULL REFERENCES exam_attempts(id) ON DELETE CASCADE,
@@ -106,17 +117,19 @@ CREATE TABLE exam_answers (
     marks_awarded NUMERIC
 );
 
+-- Assignments Table
 CREATE TABLE assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     instructions TEXT NOT NULL,
     due_at TIMESTAMPTZ NOT NULL,
-    max_score NUMERIC NOT NULL,
+    max_score NUMERIC NOT NULL DEFAULT 100,
     submission_types TEXT[] DEFAULT '{file,link,text}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Assignment Submissions Table
 CREATE TABLE assignment_submissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     assignment_id UUID NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
@@ -131,26 +144,29 @@ CREATE TABLE assignment_submissions (
     version INT NOT NULL DEFAULT 1
 );
 
+-- Coding Contests Table
 CREATE TABLE contests (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     start_at TIMESTAMPTZ,
     end_at TIMESTAMPTZ,
-    duration_minutes INT NOT NULL,
+    duration_minutes INT NOT NULL DEFAULT 60,
     status exam_status NOT NULL DEFAULT 'draft',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Contest Coding Problems Table
 CREATE TABLE problems (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     contest_id UUID NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     statement TEXT NOT NULL,
     starter_code JSONB,
-    languages JSONB NOT NULL
+    languages JSONB NOT NULL DEFAULT '["python", "javascript", "cpp", "java"]'::jsonb
 );
 
+-- Problem Test Cases Table
 CREATE TABLE test_cases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     problem_id UUID NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
@@ -160,6 +176,7 @@ CREATE TABLE test_cases (
     weight NUMERIC NOT NULL DEFAULT 1
 );
 
+-- Contest Attempts Table
 CREATE TABLE contest_attempts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     contest_id UUID NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
@@ -171,6 +188,7 @@ CREATE TABLE contest_attempts (
     last_heartbeat TIMESTAMPTZ
 );
 
+-- Violation & Integrity Log Table
 CREATE TABLE violation_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     attempt_id UUID REFERENCES exam_attempts(id) ON DELETE CASCADE,
@@ -180,6 +198,7 @@ CREATE TABLE violation_events (
     meta JSONB
 );
 
+-- Code Submissions Table
 CREATE TABLE code_submissions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     contest_attempts_id UUID NOT NULL REFERENCES contest_attempts(id) ON DELETE CASCADE,
@@ -193,7 +212,31 @@ CREATE TABLE code_submissions (
     judge_raw JSONB
 );
 
--- 4. Enable Row-Level Security on All Tables
+-- 4. Create Performance Indexes for Fast Queries
+CREATE INDEX idx_profiles_role ON profiles(role);
+CREATE INDEX idx_orgs_admin_id ON orgs(admin_id);
+CREATE INDEX idx_orgs_invite_code ON orgs(invite_code);
+CREATE INDEX idx_org_admins_admin_id ON org_admins(admin_id);
+CREATE INDEX idx_enrollments_candidate_id ON enrollments(candidate_id);
+CREATE INDEX idx_enrollments_org_id ON enrollments(org_id);
+CREATE INDEX idx_exams_org_id ON exams(org_id);
+CREATE INDEX idx_questions_exam_id ON questions(exam_id);
+CREATE INDEX idx_exam_attempts_exam_id ON exam_attempts(exam_id);
+CREATE INDEX idx_exam_attempts_candidate_id ON exam_attempts(candidate_id);
+CREATE INDEX idx_exam_answers_attempt_id ON exam_answers(attempt_id);
+CREATE INDEX idx_assignments_org_id ON assignments(org_id);
+CREATE INDEX idx_assignment_submissions_assignment_id ON assignment_submissions(assignment_id);
+CREATE INDEX idx_assignment_submissions_candidate_id ON assignment_submissions(candidate_id);
+CREATE INDEX idx_contests_org_id ON contests(org_id);
+CREATE INDEX idx_problems_contest_id ON problems(contest_id);
+CREATE INDEX idx_test_cases_problem_id ON test_cases(problem_id);
+CREATE INDEX idx_contest_attempts_contest_id ON contest_attempts(contest_id);
+CREATE INDEX idx_contest_attempts_candidate_id ON contest_attempts(candidate_id);
+CREATE INDEX idx_violation_events_attempt_id ON violation_events(attempt_id);
+CREATE INDEX idx_violation_events_contest_attempt_id ON violation_events(contest_attempt_id);
+CREATE INDEX idx_code_submissions_contest_attempts_id ON code_submissions(contest_attempts_id);
+
+-- 5. Enable Row-Level Security on All Tables
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orgs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE org_admins ENABLE ROW LEVEL SECURITY;
@@ -211,7 +254,7 @@ ALTER TABLE test_cases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contest_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE code_submissions ENABLE ROW LEVEL SECURITY;
 
--- 5. Helper Functions for RLS
+-- 6. Helper Functions for RLS (SECURITY DEFINER to avoid RLS recursion)
 CREATE OR REPLACE FUNCTION get_user_role() RETURNS user_role
 LANGUAGE sql SECURITY DEFINER SET search_path = public
 AS $$
@@ -222,6 +265,8 @@ CREATE OR REPLACE FUNCTION is_org_admin(check_org_id UUID) RETURNS BOOLEAN
 LANGUAGE sql SECURITY DEFINER SET search_path = public
 AS $$
   SELECT EXISTS (
+    SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'maintainer'
+    UNION
     SELECT 1 FROM orgs WHERE id = check_org_id AND admin_id = auth.uid()
     UNION
     SELECT 1 FROM org_admins WHERE org_id = check_org_id AND admin_id = auth.uid()
@@ -231,12 +276,16 @@ $$;
 CREATE OR REPLACE FUNCTION is_enrolled(check_org_id UUID) RETURNS BOOLEAN
 LANGUAGE sql SECURITY DEFINER SET search_path = public
 AS $$
-  SELECT EXISTS (SELECT 1 FROM enrollments WHERE org_id = check_org_id AND candidate_id = auth.uid());
+  SELECT EXISTS (
+    SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'maintainer'
+    UNION
+    SELECT 1 FROM enrollments WHERE org_id = check_org_id AND candidate_id = auth.uid()
+  );
 $$;
 
--- 6. RLS Policies
+-- 7. RLS Policies
 
--- Maintainer full access for ALL tables
+-- Maintainer full access for ALL tables dynamically
 DO $$
 DECLARE
     t_name text;
@@ -251,45 +300,38 @@ BEGIN
 END
 $$;
 
--- profiles
-CREATE POLICY "Users access own profile" ON profiles FOR ALL USING (id = auth.uid());
-CREATE POLICY "Admin read enrolled candidate profiles" ON profiles FOR SELECT USING (
+-- PROFILES
+CREATE POLICY "Users access own profile" ON profiles FOR ALL USING (id = auth.uid()) WITH CHECK (id = auth.uid());
+CREATE POLICY "Admin read candidate profiles" ON profiles FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM enrollments
-    JOIN orgs ON orgs.id = enrollments.org_id
     WHERE enrollments.candidate_id = profiles.id
-    AND orgs.admin_id = auth.uid()
+    AND is_org_admin(enrollments.org_id)
   )
+  OR get_user_role() = 'maintainer'
 );
-CREATE POLICY "Maintainer read all profiles" ON profiles FOR SELECT USING (get_user_role() = 'maintainer');
 
--- orgs
-DROP POLICY IF EXISTS "Admin access own orgs" ON orgs;
-DROP POLICY IF EXISTS "Candidate read orgs" ON orgs;
-
+-- ORGS
 CREATE POLICY "Admin select own orgs" ON orgs FOR SELECT USING (admin_id = auth.uid() OR EXISTS (SELECT 1 FROM org_admins WHERE org_id = id AND admin_id = auth.uid()) OR get_user_role() = 'maintainer');
 CREATE POLICY "Admin update own orgs" ON orgs FOR UPDATE USING (admin_id = auth.uid() OR EXISTS (SELECT 1 FROM org_admins WHERE org_id = id AND admin_id = auth.uid()) OR get_user_role() = 'maintainer');
 CREATE POLICY "Admin delete own orgs" ON orgs FOR DELETE USING (admin_id = auth.uid() OR EXISTS (SELECT 1 FROM org_admins WHERE org_id = id AND admin_id = auth.uid()) OR get_user_role() = 'maintainer');
 CREATE POLICY "Admin insert own orgs" ON orgs FOR INSERT WITH CHECK (admin_id = auth.uid() OR get_user_role() = 'maintainer');
-
 CREATE POLICY "Candidate read orgs" ON orgs FOR SELECT USING (is_enrolled(id));
 
--- org_admins
-CREATE POLICY "Admins can view their org admins" ON org_admins FOR SELECT USING (is_org_admin(org_id) OR get_user_role() = 'maintainer');
-CREATE POLICY "Admins can insert org admins" ON org_admins FOR INSERT WITH CHECK (is_org_admin(org_id) OR get_user_role() = 'maintainer');
-CREATE POLICY "Admins can delete org admins" ON org_admins FOR DELETE USING (is_org_admin(org_id) OR get_user_role() = 'maintainer');
+-- ORG_ADMINS
+CREATE POLICY "Admin manage org_admins" ON org_admins FOR ALL USING (is_org_admin(org_id));
 
--- enrollments
-CREATE POLICY "Admin access enrollments" ON enrollments FOR ALL USING (is_org_admin(org_id));
-CREATE POLICY "Candidate access own enrollments" ON enrollments FOR SELECT USING (candidate_id = auth.uid());
+-- ENROLLMENTS
+CREATE POLICY "Admin manage enrollments" ON enrollments FOR ALL USING (is_org_admin(org_id));
+CREATE POLICY "Candidate select own enrollments" ON enrollments FOR SELECT USING (candidate_id = auth.uid());
 CREATE POLICY "Candidate insert own enrollments" ON enrollments FOR INSERT WITH CHECK (candidate_id = auth.uid());
 
--- exams
-CREATE POLICY "Admin access exams" ON exams FOR ALL USING (is_org_admin(org_id));
+-- EXAMS
+CREATE POLICY "Admin manage exams" ON exams FOR ALL USING (is_org_admin(org_id));
 CREATE POLICY "Candidate read exams" ON exams FOR SELECT USING (is_enrolled(org_id) AND status != 'draft');
 
--- questions
-CREATE POLICY "Admin access questions" ON questions FOR ALL USING (
+-- QUESTIONS
+CREATE POLICY "Admin manage questions" ON questions FOR ALL USING (
     EXISTS (SELECT 1 FROM exams WHERE exams.id = exam_id AND is_org_admin(exams.org_id))
 );
 CREATE POLICY "Candidate read questions" ON questions FOR SELECT USING (
@@ -297,18 +339,17 @@ CREATE POLICY "Candidate read questions" ON questions FOR SELECT USING (
         SELECT 1 FROM exam_attempts
         WHERE exam_attempts.exam_id = questions.exam_id
         AND exam_attempts.candidate_id = auth.uid()
-        AND exam_attempts.status != 'submitted'
     )
 );
 
--- exam_attempts
+-- EXAM_ATTEMPTS
 CREATE POLICY "Admin read exam_attempts" ON exam_attempts FOR SELECT USING (
     EXISTS (SELECT 1 FROM exams WHERE exams.id = exam_id AND is_org_admin(exams.org_id))
 );
 CREATE POLICY "Candidate access own exam_attempts" ON exam_attempts FOR ALL USING (candidate_id = auth.uid());
 
--- exam_answers
-CREATE POLICY "Admin read exam_answers" ON exam_answers FOR SELECT USING (
+-- EXAM_ANSWERS
+CREATE POLICY "Admin manage exam_answers" ON exam_answers FOR ALL USING (
     EXISTS (
         SELECT 1 FROM exam_attempts
         JOIN exams ON exams.id = exam_attempts.exam_id
@@ -320,50 +361,22 @@ CREATE POLICY "Candidate access own exam_answers" ON exam_answers FOR ALL USING 
     EXISTS (SELECT 1 FROM exam_attempts WHERE exam_attempts.id = attempt_id AND exam_attempts.candidate_id = auth.uid())
 );
 
--- violation_events
-CREATE POLICY "Admin read violation_events" ON violation_events FOR SELECT USING (
-  (
-    attempt_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM exam_attempts
-      JOIN exams ON exams.id = exam_attempts.exam_id
-      JOIN orgs ON orgs.id = exams.org_id
-      WHERE exam_attempts.id = violation_events.attempt_id
-      AND orgs.admin_id = auth.uid()
-    )
-  )
-  OR
-  (
-    contest_attempt_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM contest_attempts
-      JOIN contests ON contests.id = contest_attempts.contest_id
-      JOIN orgs ON orgs.id = contests.org_id
-      WHERE contest_attempts.id = violation_events.contest_attempt_id
-      AND orgs.admin_id = auth.uid()
-    )
-  )
-);
-CREATE POLICY "Candidate insert violation_events" ON violation_events FOR INSERT WITH CHECK (
-    (attempt_id IS NOT NULL AND EXISTS (SELECT 1 FROM exam_attempts WHERE exam_attempts.id = attempt_id AND exam_attempts.candidate_id = auth.uid()))
-    OR
-    (contest_attempt_id IS NOT NULL AND EXISTS (SELECT 1 FROM contest_attempts WHERE contest_attempts.id = contest_attempt_id AND contest_attempts.candidate_id = auth.uid()))
-);
-
--- assignments
-CREATE POLICY "Admin access assignments" ON assignments FOR ALL USING (is_org_admin(org_id));
+-- ASSIGNMENTS
+CREATE POLICY "Admin manage assignments" ON assignments FOR ALL USING (is_org_admin(org_id));
 CREATE POLICY "Candidate read assignments" ON assignments FOR SELECT USING (is_enrolled(org_id));
 
--- assignment_submissions
-CREATE POLICY "Admin access assignment_submissions" ON assignment_submissions FOR ALL USING (
+-- ASSIGNMENT_SUBMISSIONS
+CREATE POLICY "Admin manage assignment_submissions" ON assignment_submissions FOR ALL USING (
     EXISTS (SELECT 1 FROM assignments WHERE assignments.id = assignment_id AND is_org_admin(assignments.org_id))
 );
 CREATE POLICY "Candidate access own assignment_submissions" ON assignment_submissions FOR ALL USING (candidate_id = auth.uid());
 
--- contests
-CREATE POLICY "Admin access contests" ON contests FOR ALL USING (is_org_admin(org_id));
+-- CONTESTS
+CREATE POLICY "Admin manage contests" ON contests FOR ALL USING (is_org_admin(org_id));
 CREATE POLICY "Candidate read contests" ON contests FOR SELECT USING (is_enrolled(org_id) AND status != 'draft');
 
--- problems
-CREATE POLICY "Admin access problems" ON problems FOR ALL USING (
+-- PROBLEMS
+CREATE POLICY "Admin manage problems" ON problems FOR ALL USING (
     EXISTS (SELECT 1 FROM contests WHERE contests.id = contest_id AND is_org_admin(contests.org_id))
 );
 CREATE POLICY "Candidate read problems" ON problems FOR SELECT USING (
@@ -371,12 +384,11 @@ CREATE POLICY "Candidate read problems" ON problems FOR SELECT USING (
         SELECT 1 FROM contest_attempts
         WHERE contest_attempts.contest_id = problems.contest_id
         AND contest_attempts.candidate_id = auth.uid()
-        AND contest_attempts.status != 'submitted'
     )
 );
 
--- test_cases
-CREATE POLICY "Admin access test_cases" ON test_cases FOR ALL USING (
+-- TEST_CASES
+CREATE POLICY "Admin manage test_cases" ON test_cases FOR ALL USING (
     EXISTS (
         SELECT 1 FROM problems
         JOIN contests ON contests.id = problems.contest_id
@@ -391,17 +403,42 @@ CREATE POLICY "Candidate read sample test_cases" ON test_cases FOR SELECT USING 
         JOIN contest_attempts ON contest_attempts.contest_id = problems.contest_id
         WHERE problems.id = problem_id
         AND contest_attempts.candidate_id = auth.uid()
-        AND contest_attempts.status != 'submitted'
     )
 );
 
--- contest_attempts
+-- CONTEST_ATTEMPTS
 CREATE POLICY "Admin read contest_attempts" ON contest_attempts FOR SELECT USING (
     EXISTS (SELECT 1 FROM contests WHERE contests.id = contest_id AND is_org_admin(contests.org_id))
 );
 CREATE POLICY "Candidate access own contest_attempts" ON contest_attempts FOR ALL USING (candidate_id = auth.uid());
 
--- code_submissions
+-- VIOLATION_EVENTS
+CREATE POLICY "Admin read violation_events" ON violation_events FOR SELECT USING (
+  (
+    attempt_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM exam_attempts
+      JOIN exams ON exams.id = exam_attempts.exam_id
+      WHERE exam_attempts.id = violation_events.attempt_id
+      AND is_org_admin(exams.org_id)
+    )
+  )
+  OR
+  (
+    contest_attempt_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM contest_attempts
+      JOIN contests ON contests.id = contest_attempts.contest_id
+      WHERE contest_attempts.id = violation_events.contest_attempt_id
+      AND is_org_admin(contests.org_id)
+    )
+  )
+);
+CREATE POLICY "Candidate insert violation_events" ON violation_events FOR INSERT WITH CHECK (
+  (attempt_id IS NOT NULL AND EXISTS (SELECT 1 FROM exam_attempts WHERE exam_attempts.id = attempt_id AND exam_attempts.candidate_id = auth.uid()))
+  OR
+  (contest_attempt_id IS NOT NULL AND EXISTS (SELECT 1 FROM contest_attempts WHERE contest_attempts.id = contest_attempt_id AND contest_attempts.candidate_id = auth.uid()))
+);
+
+-- CODE_SUBMISSIONS
 CREATE POLICY "Admin read code_submissions" ON code_submissions FOR SELECT USING (
     EXISTS (
         SELECT 1 FROM contest_attempts
@@ -414,12 +451,14 @@ CREATE POLICY "Candidate access own code_submissions" ON code_submissions FOR AL
     EXISTS (SELECT 1 FROM contest_attempts WHERE contest_attempts.id = contest_attempts_id AND contest_attempts.candidate_id = auth.uid())
 );
 
--- 7. Default Grants
+-- 8. Default Schema Grants
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL PRIVILEGES ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
 
--- 8. Storage Bucket for Assignment Submissions
+-- 9. Storage Buckets & Policies
+
+-- Bucket: assignment-submissions
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('assignment-submissions', 'assignment-submissions', true)
 ON CONFLICT (id) DO NOTHING;
@@ -438,10 +477,13 @@ WITH CHECK (
   AND auth.role() = 'authenticated'
 );
 
--- 9. Storage Bucket for Exam Uploads
+-- Bucket: exam-uploads
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('exam-uploads', 'exam-uploads', true)
 ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Public Read Exam Files" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated Upload Exam Files" ON storage.objects;
 
 CREATE POLICY "Public Read Exam Files" ON storage.objects
 FOR SELECT USING (bucket_id = 'exam-uploads');
