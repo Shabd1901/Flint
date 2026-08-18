@@ -10,7 +10,7 @@ export default async function AdminOrgs() {
 
   const { data: orgs, error } = await supabase
     .from('orgs')
-    .select('*, org_admins(admin_id)')
+    .select('*')
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -19,12 +19,32 @@ export default async function AdminOrgs() {
 
   let finalOrgs = orgs || []
   if (finalOrgs.length > 0) {
+    const orgIds = finalOrgs.map(o => o.id)
+    
+    // Fetch org_admins separately to avoid PostgREST relationship ambiguity errors
+    const { data: orgAdminsData } = await supabase
+      .from('org_admins')
+      .select('org_id, admin_id')
+      .in('org_id', orgIds)
+      
+    // Group org_admins by org_id
+    const orgAdminsMap = new Map<string, any[]>()
+    if (orgAdminsData) {
+      orgAdminsData.forEach(oa => {
+        if (!orgAdminsMap.has(oa.org_id)) orgAdminsMap.set(oa.org_id, [])
+        orgAdminsMap.get(oa.org_id)!.push(oa)
+      })
+    }
+
     const adminIds = new Set<string>()
     finalOrgs.forEach(o => {
       adminIds.add(o.admin_id)
-      o.org_admins?.forEach((ca: any) => adminIds.add(ca.admin_id))
+      const coAdmins = orgAdminsMap.get(o.id) || []
+      coAdmins.forEach(ca => adminIds.add(ca.admin_id))
+      o.org_admins = coAdmins
     })
 
+    // Fetch profiles
     const { data: profiles } = await supabase.from('profiles').select('id, name, email').in('id', Array.from(adminIds))
     const profileMap = new Map(profiles?.map(p => [p.id, p]))
 
