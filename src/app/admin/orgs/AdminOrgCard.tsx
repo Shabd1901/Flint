@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react'
 import { Building, Trash2, Key, Users, X, RefreshCw, UserPlus, Edit2, Check } from 'lucide-react'
 import { deleteOrg, addCoAdminAction, removeCoAdminAction, updateOrg } from './actions'
+import Link from 'next/link'
+import { ChevronRight } from 'lucide-react'
 
 export function AdminOrgCard({ org, currentUserId }: { org: any, currentUserId: string }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -110,7 +112,9 @@ export function AdminOrgCard({ org, currentUserId }: { org: any, currentUserId: 
               </div>
             ) : (
               <>
-                <h2 className="text-lg font-semibold truncate" title={org.name}>{org.name}</h2>
+                <Link href={`/admin/orgs/${org.id}`} className="text-lg font-semibold truncate hover:text-accent hover:underline flex items-center gap-1 group" title={org.name}>
+                  {org.name} <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
                 {isOwner && (
                   <button onClick={() => setIsEditingName(true)} className="text-text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition">
                     <Edit2 size={14} />

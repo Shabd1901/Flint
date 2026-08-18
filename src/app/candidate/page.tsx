@@ -2,6 +2,8 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import Link from 'next/link'
+import { ChevronRight } from 'lucide-react'
 
 export default async function CandidateDashboard({
   searchParams,
@@ -176,10 +178,10 @@ export default async function CandidateDashboard({
           <h2 className="text-lg font-semibold">My Organizations</h2>
           <div className="mt-3 space-y-2">
             {enrollments.map((e: any) => (
-              <div key={e.org_id} className="flex items-center justify-between rounded-lg border bg-surface-soft p-3">
-                <span className="font-medium">{e.orgs?.name}</span>
-                <span className="text-xs text-text-muted">Enrolled</span>
-              </div>
+              <Link key={e.org_id} href={`/candidate/orgs/${e.org_id}`} className="flex items-center justify-between rounded-lg border bg-surface-soft hover:bg-surface-soft/70 transition p-4">
+                <span className="font-medium text-accent group-hover:text-accent-strong">{e.orgs?.name}</span>
+                <span className="flex items-center text-xs text-text-muted">Enter Classroom <ChevronRight size={14} className="ml-1" /></span>
+              </Link>
             ))}
           </div>
         </section>

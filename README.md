@@ -43,10 +43,12 @@ git remote add ameya https://github.com/Ameya79/Flint.git
 **2. Fetch their latest changes:**
 
 git fetch ameya
+git fetch dev
 
 **3. Checkout their code into a temporary testing branch:**
 
 git checkout -b test-ameya ameya/main
+git checkout -b test-dev dev/nom_nom
 
 **4. Merge and Push to the main repository (if everything works):**
 
@@ -54,7 +56,12 @@ git checkout main
 git merge test-ameya
 git push origin main
 
+git checkout main
+git merge test-dev
+git push origin main
+
 **5. Clean up (delete the temporary branch):**
 
 git branch -d test-ameya
+git branch -d test-dev
 
