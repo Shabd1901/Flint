@@ -5,19 +5,7 @@ import { Trash2, Key, Users, X, RefreshCw, UserPlus, Edit2, Check, MoreVertical,
 import { deleteOrg, addCoAdminAction, removeCoAdminAction, updateOrg } from './actions'
 import Link from 'next/link'
 
-// Rotating color palette for tile banners (Google Classroom style)
-const TILE_COLORS = [
-  'from-indigo-500 to-indigo-600',
-  'from-emerald-500 to-emerald-600',
-  'from-rose-500 to-rose-600',
-  'from-amber-500 to-amber-600',
-  'from-sky-500 to-sky-600',
-  'from-violet-500 to-violet-600',
-  'from-teal-500 to-teal-600',
-  'from-pink-500 to-pink-600',
-]
-
-export function AdminOrgCard({ org, currentUserId, index }: { org: any, currentUserId: string, index: number }) {
+export function AdminOrgCard({ org, currentUserId }: { org: any, currentUserId: string }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [isPending, startTransition] = useTransition()
@@ -33,7 +21,6 @@ export function AdminOrgCard({ org, currentUserId, index }: { org: any, currentU
 
   const isOwner = org.admin_id === currentUserId
   const coAdmins = org.org_admins || []
-  const bannerColor = TILE_COLORS[index % TILE_COLORS.length]
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -107,10 +94,10 @@ export function AdminOrgCard({ org, currentUserId, index }: { org: any, currentU
   return (
     <>
       <div className="rounded-xl border border-line overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col bg-white">
-        {/* Colored Banner Header — clickable to enter classroom */}
+        {/* Professional Header — clickable to enter classroom */}
         <Link
           href={`/admin/orgs/${org.id}`}
-          className={`block bg-gradient-to-br ${bannerColor} p-5 pb-6 relative`}
+          className="block border-b border-line bg-surface-soft/50 p-5 pb-5 relative hover:bg-surface-soft transition-colors"
         >
           <div className="flex justify-between items-start">
             <div className="flex-1 min-w-0">
@@ -125,19 +112,19 @@ export function AdminOrgCard({ org, currentUserId, index }: { org: any, currentU
                       if (e.key === 'Escape') { setIsEditingName(false); setEditName(org.name) }
                     }}
                     disabled={isPending}
-                    className="h-8 rounded border px-2 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-white/50 w-full max-w-xs"
+                    className="h-8 rounded border px-2 text-sm font-semibold text-text focus:outline-none focus:ring-2 focus:ring-accent w-full max-w-xs"
                   />
-                  <button onClick={(e) => { e.preventDefault(); handleRename() }} disabled={isPending} className="p-1.5 bg-white/20 hover:bg-white/30 text-white rounded">
+                  <button onClick={(e) => { e.preventDefault(); handleRename() }} disabled={isPending} className="p-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded">
                     {isPending ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
                   </button>
-                  <button onClick={(e) => { e.preventDefault(); setIsEditingName(false); setEditName(org.name) }} disabled={isPending} className="p-1.5 bg-white/20 hover:bg-white/30 text-white rounded">
+                  <button onClick={(e) => { e.preventDefault(); setIsEditingName(false); setEditName(org.name) }} disabled={isPending} className="p-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded">
                     <X size={14} />
                   </button>
                 </div>
               ) : (
                 <>
-                  <h2 className="text-xl font-bold text-white truncate">{org.name}</h2>
-                  {!isOwner && <span className="mt-1 inline-block text-[10px] bg-white/20 px-1.5 py-0.5 rounded text-white/90 font-medium">Co-Admin</span>}
+                  <h2 className="text-lg font-bold text-text group-hover:text-accent transition-colors truncate">{org.name}</h2>
+                  {!isOwner && <span className="mt-1 inline-block text-[10px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-medium">Co-Admin</span>}
                 </>
               )}
             </div>
@@ -146,7 +133,7 @@ export function AdminOrgCard({ org, currentUserId, index }: { org: any, currentU
             <div className="relative" onClick={e => e.preventDefault()}>
               <button 
                 onClick={() => setShowMenu(!showMenu)}
-                className="p-1.5 rounded-full hover:bg-white/20 text-white/80 hover:text-white transition"
+                className="p-1.5 rounded-md hover:bg-line text-text-muted hover:text-text transition"
               >
                 <MoreVertical size={18} />
               </button>

@@ -77,8 +77,8 @@ export default async function AdminOrgs() {
 
       {finalOrgs && finalOrgs.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {finalOrgs.map((org, i) => (
-            <AdminOrgCard key={org.id} org={org} currentUserId={user.id} index={i} />
+          {finalOrgs.map((org) => (
+            <AdminOrgCard key={org.id} org={org} currentUserId={user.id} />
           ))}
         </div>
       ) : (
