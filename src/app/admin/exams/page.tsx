@@ -2,9 +2,15 @@ import { createClient } from '@/utils/supabase/server'
 import { formatDateTime } from '@/utils/formatDate'
 import { createExam } from './actions'
 import { ExamCardActions } from './ExamCardActions'
-import { FileText, Users } from 'lucide-react'
+import { FileText, Users, ChevronLeft, ChevronRight } from 'lucide-react'
 
-export default async function AdminExams() {
+export default async function AdminExams({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page } = await searchParams
+  const currentPage = Number(page) || 1
+  const PAGE_SIZE = 5
+  
+  const from = (currentPage - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: org } = await supabase.from('orgs').select('id').limit(1).single()
@@ -14,9 +20,18 @@ export default async function AdminExams() {
   let questionCounts = new Map<string, number>()
   let attemptCounts = new Map<string, number>()
 
+  let totalExams = 0
+
   if (org) {
-    const { data: examData } = await supabase.from('exams').select('*').eq('org_id', org.id).order('created_at', { ascending: false })
+    const { data: examData, count } = await supabase
+      .from('exams')
+      .select('*', { count: 'exact' })
+      .eq('org_id', org.id)
+      .order('created_at', { ascending: false })
+      .range(from, to)
+      
     exams = examData || []
+    totalExams = count || 0
 
     if (exams.length > 0) {
       const examIds = exams.map(e => e.id)
@@ -95,6 +110,36 @@ export default async function AdminExams() {
                   </div>
                 )
               })}
+              
+              {/* Pagination Controls */}
+              {totalExams > PAGE_SIZE && (
+                <div className="flex items-center justify-between border-t pt-4 mt-6">
+                  <p className="text-sm text-text-muted">
+                    Showing <span className="font-medium">{from + 1}</span> to <span className="font-medium">{Math.min(to + 1, totalExams)}</span> of <span className="font-medium">{totalExams}</span> exams
+                  </p>
+                  <div className="flex gap-2">
+                    {currentPage > 1 ? (
+                      <a href={`/admin/exams?page=${currentPage - 1}`} className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-surface-soft transition">
+                        <ChevronLeft size={16} /> Prev
+                      </a>
+                    ) : (
+                      <button disabled className="inline-flex items-center gap-1 rounded-md border bg-surface-soft px-3 py-1.5 text-sm font-medium text-text-muted opacity-50 cursor-not-allowed">
+                        <ChevronLeft size={16} /> Prev
+                      </button>
+                    )}
+                    
+                    {currentPage * PAGE_SIZE < totalExams ? (
+                      <a href={`/admin/exams?page=${currentPage + 1}`} className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-surface-soft transition">
+                        Next <ChevronRight size={16} />
+                      </a>
+                    ) : (
+                      <button disabled className="inline-flex items-center gap-1 rounded-md border bg-surface-soft px-3 py-1.5 text-sm font-medium text-text-muted opacity-50 cursor-not-allowed">
+                        Next <ChevronRight size={16} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
