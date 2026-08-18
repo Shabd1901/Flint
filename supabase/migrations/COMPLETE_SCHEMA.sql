@@ -507,18 +507,18 @@ DECLARE
     a2_id UUID := '20000000-0000-0000-0000-000000000002';
     c1_id UUID := '30000000-0000-0000-0000-000000000001';
     c2_id UUID := '30000000-0000-0000-0000-000000000002';
-    enc_pass TEXT := extensions.crypt('password123', extensions.gen_salt('bf'));
+    enc_pass TEXT := extensions.crypt('password123', extensions.gen_salt('bf', 10));
 BEGIN
 
     -- Create Auth Users
-    INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, aud, role, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin)
+    INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, confirmed_at, aud, role, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin)
     VALUES
-    (m1_id, '00000000-0000-0000-0000-000000000000', 'm1@test.com', enc_pass, NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Maintainer One"}', false),
-    (m2_id, '00000000-0000-0000-0000-000000000000', 'm2@test.com', enc_pass, NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Maintainer Two"}', false),
-    (a1_id, '00000000-0000-0000-0000-000000000000', 'a1@test.com', enc_pass, NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Admin One"}', false),
-    (a2_id, '00000000-0000-0000-0000-000000000000', 'a2@test.com', enc_pass, NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Admin Two"}', false),
-    (c1_id, '00000000-0000-0000-0000-000000000000', 'c1@test.com', enc_pass, NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Candidate One"}', false),
-    (c2_id, '00000000-0000-0000-0000-000000000000', 'c2@test.com', enc_pass, NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Candidate Two"}', false);
+    (m1_id, '00000000-0000-0000-0000-000000000000', 'm1@test.com', enc_pass, NOW(), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Maintainer One"}', false),
+    (m2_id, '00000000-0000-0000-0000-000000000000', 'm2@test.com', enc_pass, NOW(), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Maintainer Two"}', false),
+    (a1_id, '00000000-0000-0000-0000-000000000000', 'a1@test.com', enc_pass, NOW(), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Admin One"}', false),
+    (a2_id, '00000000-0000-0000-0000-000000000000', 'a2@test.com', enc_pass, NOW(), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Admin Two"}', false),
+    (c1_id, '00000000-0000-0000-0000-000000000000', 'c1@test.com', enc_pass, NOW(), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Candidate One"}', false),
+    (c2_id, '00000000-0000-0000-0000-000000000000', 'c2@test.com', enc_pass, NOW(), NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Candidate Two"}', false);
 
     -- Create Auth Identities (REQUIRED by Supabase GoTrue for email auth)
     INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
