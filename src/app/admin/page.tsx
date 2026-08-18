@@ -144,17 +144,19 @@ export default async function AdminDashboard({ searchParams }: { searchParams: P
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-white border shadow-sm px-4 py-3 rounded-lg">
             <div className="flex items-center gap-2">
               <span className="text-sm text-text-muted font-medium whitespace-nowrap">Active Context:</span>
-              <form>
+              <form className="flex items-center gap-2">
                 <select 
                   name="org_id" 
                   defaultValue={org.id} 
-                  onChange="this.form.submit()"
                   className="bg-surface-soft border border-line rounded-md text-sm font-semibold px-2 py-1 outline-none focus:ring-2 focus:ring-accent w-48"
                 >
                   {allOrgs?.map(o => (
                     <option key={o.id} value={o.id}>{o.name}</option>
                   ))}
                 </select>
+                <button type="submit" className="text-xs font-semibold bg-accent text-white px-2.5 py-1.5 rounded hover:bg-accent-strong transition">
+                  Switch
+                </button>
               </form>
             </div>
             
