@@ -12,7 +12,7 @@ export default async function AdminOrgs() {
     .from('orgs')
     .select('*, org_admins(admin_id, profiles(name, email))')
     .order('created_at', { ascending: false })
-  
+
   return (
     <div className="container-page py-6 md:py-8 space-y-6 max-w-5xl">
       <header className="mb-8 flex justify-between items-end gap-4">
@@ -39,7 +39,7 @@ export default async function AdminOrgs() {
           <h2 className="text-lg font-semibold mb-4">Create Organization</h2>
           <div>
             <label className="block text-sm font-medium text-text-muted mb-1">Name</label>
-            <input name="name" required className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" placeholder="e.g. Acme Corp Hiring" />
+            <input name="name" required className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" placeholder="e.g. ABC Classroom" />
           </div>
           <button className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-accent-strong mt-4">
             Create
