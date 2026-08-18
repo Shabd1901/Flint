@@ -25,14 +25,7 @@ export async function register(formData: FormData) {
 
   if (authError) {
     if (authError.message.toLowerCase().includes('already') || authError.code === 'email_exists') {
-      const { data: usersData } = await adminClient.auth.admin.listUsers()
-      const existingUser = usersData.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
-      if (existingUser) {
-        targetUserId = existingUser.id
-        await adminClient.auth.admin.updateUserById(targetUserId, { password, email_confirm: true })
-      } else {
-        redirect(`/register?error=${encodeURIComponent(authError.message)}`)
-      }
+      redirect(`/register?error=${encodeURIComponent('An account with this email already exists. Please log in.')}`)
     } else {
       redirect(`/register?error=${encodeURIComponent(authError.message || 'Error creating account')}`)
     }
