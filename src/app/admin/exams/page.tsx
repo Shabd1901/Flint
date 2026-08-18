@@ -2,10 +2,11 @@ import { createClient } from '@/utils/supabase/server'
 import { formatDateTime } from '@/utils/formatDate'
 import { createExam } from './actions'
 import { ExamCardActions } from './ExamCardActions'
+import { ExamFilters } from './ExamFilters'
 import { FileText, Users, ChevronLeft, ChevronRight } from 'lucide-react'
 
-export default async function AdminExams({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
-  const { page } = await searchParams
+export default async function AdminExams({ searchParams }: { searchParams: Promise<{ page?: string; q?: string; status?: string }> }) {
+  const { page, q, status } = await searchParams
   const currentPage = Number(page) || 1
   const PAGE_SIZE = 5
   
@@ -23,10 +24,20 @@ export default async function AdminExams({ searchParams }: { searchParams: Promi
   let totalExams = 0
 
   if (org) {
-    const { data: examData, count } = await supabase
+    let query = supabase
       .from('exams')
       .select('*', { count: 'exact' })
       .eq('org_id', org.id)
+      
+    if (q) {
+      query = query.ilike('title', `%${q}%`)
+    }
+    
+    if (status) {
+      query = query.eq('status', status)
+    }
+
+    const { data: examData, count } = await query
       .order('created_at', { ascending: false })
       .range(from, to)
       
@@ -61,11 +72,13 @@ export default async function AdminExams({ searchParams }: { searchParams: Promi
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-semibold text-text-muted">All Exams</h2>
+        <div className="lg:col-span-2">
+          <ExamFilters />
+          
+          <h2 className="text-lg font-semibold text-text-muted mb-4">All Exams</h2>
           {exams.length === 0 ? (
             <div className="p-8 border border-line border-dashed rounded-xl text-center text-text-muted">
-              No exams created yet.
+              No exams found matching your criteria.
             </div>
           ) : (
             <div className="space-y-4">
@@ -119,7 +132,7 @@ export default async function AdminExams({ searchParams }: { searchParams: Promi
                   </p>
                   <div className="flex gap-2">
                     {currentPage > 1 ? (
-                      <a href={`/admin/exams?page=${currentPage - 1}`} className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-surface-soft transition">
+                      <a href={`/admin/exams?page=${currentPage - 1}${q ? `&q=${q}` : ''}${status ? `&status=${status}` : ''}`} className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-surface-soft transition">
                         <ChevronLeft size={16} /> Prev
                       </a>
                     ) : (
@@ -129,7 +142,7 @@ export default async function AdminExams({ searchParams }: { searchParams: Promi
                     )}
                     
                     {currentPage * PAGE_SIZE < totalExams ? (
-                      <a href={`/admin/exams?page=${currentPage + 1}`} className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-surface-soft transition">
+                      <a href={`/admin/exams?page=${currentPage + 1}${q ? `&q=${q}` : ''}${status ? `&status=${status}` : ''}`} className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-surface-soft transition">
                         Next <ChevronRight size={16} />
                       </a>
                     ) : (
