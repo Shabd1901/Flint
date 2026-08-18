@@ -3,20 +3,31 @@
 import { useTransition } from 'react'
 import { Trash2, Copy } from 'lucide-react'
 import { deleteExam, duplicateExam } from './actions'
+import { toast } from 'react-hot-toast'
 
 export function ExamCardActions({ examId }: { examId: string }) {
   const [isPending, startTransition] = useTransition()
 
   function handleDelete() {
     if (!confirm('Delete this exam and all its questions?')) return
-    startTransition(() => {
-      deleteExam(examId)
+    startTransition(async () => {
+      const res = await deleteExam(examId)
+      if (res?.error) {
+        toast.error(res.error)
+      } else {
+        toast.success("Exam deleted successfully")
+      }
     })
   }
 
   function handleDuplicate() {
-    startTransition(() => {
-      duplicateExam(examId)
+    startTransition(async () => {
+      const res = await duplicateExam(examId)
+      if (res?.error) {
+        toast.error(res.error)
+      } else {
+        toast.success("Exam duplicated successfully")
+      }
     })
   }
 
