@@ -5,6 +5,7 @@ import { QuestionManager } from './QuestionManager'
 import { ExamSettingsEditor } from './ExamSettingsEditor'
 import { updateExamStatus, toggleResultRelease, gradeExamAnswer } from './actions'
 import { DeleteExamButton } from './DeleteExamButton'
+import { AutoReleaseToggle } from './AutoReleaseToggle'
 import Link from 'next/link'
 
 function parseArray(val: any): string[] {
@@ -68,22 +69,7 @@ export default async function ExamDetails({ params }: { params: Promise<{ id: st
         
         <div className="flex flex-wrap items-center gap-3">
           {/* Result Release Toggle */}
-          <form action={toggleResultRelease.bind(null, id, exam?.auto_release_results ?? true)}>
-            <button
-              type="submit"
-              className={`inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-semibold transition ${
-                exam?.auto_release_results ?? true
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100'
-                  : 'bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100'
-              }`}
-            >
-              {exam?.auto_release_results ?? true ? (
-                <><Eye size={14} /> Auto-Release: ON</>
-              ) : (
-                <><EyeOff size={14} /> Scores Held</>
-              )}
-            </button>
-          </form>
+          <AutoReleaseToggle examId={id} initialValue={exam?.auto_release_results ?? true} />
 
           {/* Export CSV */}
           <a
