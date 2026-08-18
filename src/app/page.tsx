@@ -91,7 +91,7 @@ export default async function Page() {
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Metric label="Active candidates" value="172" hint="Open participant list" />
+                <Metric label="Active candidates" value="100+" hint="Open participant list" />
                 <Metric label="Live sessions" value="4" hint="Inspect running windows" />
                 <Metric label="Flagged events (1h)" value="18" hint="Review queue" tone="warning" />
                 <Metric label="Timer drift" value="0s" hint="Server clock healthy" tone="success" />
