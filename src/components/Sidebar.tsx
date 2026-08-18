@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { LogOut, Menu, X, type LucideIcon } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 
@@ -54,9 +55,12 @@ export function Sidebar({
   return (
     <>
       <div className="sticky top-0 z-40 flex items-center justify-between border-b bg-surface p-4 md:hidden">
-        <div>
-          <p className="font-semibold tracking-tight">{title}</p>
-          <p className="text-xs uppercase tracking-[0.12em] text-text-muted">{role} portal</p>
+        <div className="flex items-center gap-2">
+          <Image src="/flint-griffin-logo.svg" alt="Flint Logo" width={24} height={24} />
+          <div>
+            <p className="font-semibold tracking-tight">{title}</p>
+            <p className="text-xs uppercase tracking-[0.12em] text-text-muted">{role} portal</p>
+          </div>
         </div>
         <button
           onClick={() => setIsOpen((prev) => !prev)}
@@ -74,9 +78,12 @@ export function Sidebar({
           ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
-        <div>
-          <p className="text-xl font-semibold tracking-tight">{title}</p>
-          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">{role} portal</p>
+        <div className="flex items-center gap-3">
+          <Image src="/flint-griffin-logo.svg" alt="Flint Logo" width={32} height={32} />
+          <div>
+            <p className="text-xl font-semibold tracking-tight">{title}</p>
+            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">{role} portal</p>
+          </div>
         </div>
 
         <nav className="mt-6 space-y-1.5">

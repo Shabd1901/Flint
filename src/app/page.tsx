@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { ArrowRight, ChevronRight, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
@@ -29,7 +30,7 @@ export default async function Page() {
       <header className="border-b bg-surface">
         <div className="container-page flex h-16 items-center justify-between">
           <div className="flex items-center gap-2 font-semibold tracking-tight">
-            <span className="h-2.5 w-2.5 rounded-full bg-accent" />
+            <Image src="/flint-griffin-logo.svg" alt="Flint Logo" width={32} height={32} />
             Flint
           </div>
           <nav className="hidden items-center gap-5 text-sm text-text-muted md:flex">
