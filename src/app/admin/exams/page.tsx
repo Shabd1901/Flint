@@ -51,14 +51,19 @@ export default async function AdminExams({ searchParams }: { searchParams: Promi
     if (exams.length > 0) {
       const examIds = exams.map(e => e.id)
 
-      // Fetch question counts per exam
-      const { data: questions } = await supabase.from('questions').select('exam_id').in('exam_id', examIds)
+      // Fetch question and attempt counts in parallel to reduce waterfall latency
+      const [
+        { data: questions },
+        { data: attempts }
+      ] = await Promise.all([
+        supabase.from('questions').select('exam_id').in('exam_id', examIds),
+        supabase.from('exam_attempts').select('exam_id').in('exam_id', examIds)
+      ])
+
       for (const q of (questions || [])) {
         questionCounts.set(q.exam_id, (questionCounts.get(q.exam_id) || 0) + 1)
       }
 
-      // Fetch attempt counts per exam
-      const { data: attempts } = await supabase.from('exam_attempts').select('exam_id').in('exam_id', examIds)
       for (const a of (attempts || [])) {
         attemptCounts.set(a.exam_id, (attemptCounts.get(a.exam_id) || 0) + 1)
       }
