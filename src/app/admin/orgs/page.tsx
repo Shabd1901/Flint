@@ -58,38 +58,35 @@ export default async function AdminOrgs() {
   }
 
   return (
-    <div className="container-page py-6 md:py-8 space-y-6 max-w-5xl">
-      <header className="mb-8 flex justify-between items-end gap-4">
+    <div className="container-page py-6 md:py-8 space-y-6 max-w-6xl">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Organizations</h1>
-          <p className="mt-2 text-sm text-text-muted">Manage your organizations and view invite codes.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">My Classrooms</h1>
+          <p className="mt-1 text-sm text-text-muted">Click on a classroom to manage exams, assignments, and contests.</p>
         </div>
-      </header>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 items-start">
-        <div className="space-y-4">
-          {finalOrgs && finalOrgs.length > 0 ? (
-            finalOrgs.map(org => (
-              <AdminOrgCard key={org.id} org={org} currentUserId={user.id} />
-            ))
-          ) : (
-            <div className="p-8 border border-line border-dashed rounded-xl text-center text-text-muted">
-              No organizations found.
-            </div>
-          )}
-        </div>
-
-        <form action={createOrg} className="surface-card p-5 sticky top-8">
-          <h2 className="text-lg font-semibold mb-4">Create Organization</h2>
+        <form action={createOrg} className="flex items-end gap-2">
           <div>
-            <label className="block text-sm font-medium text-text-muted mb-1">Name</label>
-            <input name="name" required className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" placeholder="e.g. ABC Classroom" />
+            <label className="block text-xs font-medium text-text-muted mb-1">New Classroom</label>
+            <input name="name" required className="h-10 w-56 rounded-md border bg-white px-3 text-sm outline-none ring-accent focus:ring-2" placeholder="e.g. Data Structures" />
           </div>
-          <button className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-accent-strong mt-4">
-            Create
+          <button className="h-10 rounded-md bg-accent px-5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-accent-strong">
+            + Create
           </button>
         </form>
-      </div>
+      </header>
+
+      {finalOrgs && finalOrgs.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {finalOrgs.map((org, i) => (
+            <AdminOrgCard key={org.id} org={org} currentUserId={user.id} index={i} />
+          ))}
+        </div>
+      ) : (
+        <div className="p-16 border border-line border-dashed rounded-xl text-center text-text-muted">
+          <p className="text-lg font-medium">No classrooms yet</p>
+          <p className="text-sm mt-1">Create your first classroom above to get started.</p>
+        </div>
+      )}
     </div>
   )
 }
