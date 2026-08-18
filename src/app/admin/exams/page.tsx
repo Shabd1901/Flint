@@ -5,10 +5,14 @@ import { ExamCardActions } from './ExamCardActions'
 import { ExamFilters } from './ExamFilters'
 import { FileText, Users, ChevronLeft, ChevronRight } from 'lucide-react'
 
-export default async function AdminExams({ searchParams }: { searchParams: Promise<{ page?: string; q?: string; status?: string }> }) {
-  const { page, q, status } = await searchParams
+export default async function AdminExams({ searchParams }: { searchParams: Promise<{ page?: string; q?: string; status?: string; sort?: string }> }) {
+  const { page, q, status, sort } = await searchParams
   const currentPage = Number(page) || 1
   const PAGE_SIZE = 5
+
+  const sortParam = sort || 'created_at-desc'
+  const [sortCol, sortDir] = sortParam.split('-')
+  const isAscending = sortDir === 'asc'
   
   const from = (currentPage - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
@@ -38,7 +42,7 @@ export default async function AdminExams({ searchParams }: { searchParams: Promi
     }
 
     const { data: examData, count } = await query
-      .order('created_at', { ascending: false })
+      .order(sortCol, { ascending: isAscending })
       .range(from, to)
       
     exams = examData || []
@@ -132,7 +136,7 @@ export default async function AdminExams({ searchParams }: { searchParams: Promi
                   </p>
                   <div className="flex gap-2">
                     {currentPage > 1 ? (
-                      <a href={`/admin/exams?page=${currentPage - 1}${q ? `&q=${q}` : ''}${status ? `&status=${status}` : ''}`} className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-surface-soft transition">
+                      <a href={`/admin/exams?page=${currentPage - 1}${q ? `&q=${q}` : ''}${status ? `&status=${status}` : ''}${sort ? `&sort=${sort}` : ''}`} className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-surface-soft transition">
                         <ChevronLeft size={16} /> Prev
                       </a>
                     ) : (
@@ -142,7 +146,7 @@ export default async function AdminExams({ searchParams }: { searchParams: Promi
                     )}
                     
                     {currentPage * PAGE_SIZE < totalExams ? (
-                      <a href={`/admin/exams?page=${currentPage + 1}${q ? `&q=${q}` : ''}${status ? `&status=${status}` : ''}`} className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-surface-soft transition">
+                      <a href={`/admin/exams?page=${currentPage + 1}${q ? `&q=${q}` : ''}${status ? `&status=${status}` : ''}${sort ? `&sort=${sort}` : ''}`} className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-surface-soft transition">
                         Next <ChevronRight size={16} />
                       </a>
                     ) : (

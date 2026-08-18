@@ -63,6 +63,19 @@ export function ExamFilters() {
         <option value="live">Live</option>
         <option value="closed">Closed</option>
       </select>
+
+      <select
+        defaultValue={searchParams.get('sort') || 'created_at-desc'}
+        onChange={(e) => updateFilters({ sort: e.target.value, page: '1' })}
+        className="h-10 px-3 rounded-md border bg-white outline-none ring-accent focus:ring-2 text-sm sm:w-48"
+      >
+        <option value="created_at-desc">Newest First</option>
+        <option value="created_at-asc">Oldest First</option>
+        <option value="title-asc">Title (A-Z)</option>
+        <option value="title-desc">Title (Z-A)</option>
+        <option value="duration_minutes-desc">Duration (Longest)</option>
+        <option value="duration_minutes-asc">Duration (Shortest)</option>
+      </select>
     </div>
   )
 }
