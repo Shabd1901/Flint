@@ -6,6 +6,7 @@ import { ExamSettingsEditor } from './ExamSettingsEditor'
 import { updateExamStatus, toggleResultRelease, gradeExamAnswer } from './actions'
 import { DeleteExamButton } from './DeleteExamButton'
 import { AutoReleaseToggle } from './AutoReleaseToggle'
+import { StatusUpdateForm } from './StatusUpdateForm'
 import Link from 'next/link'
 
 function parseArray(val: any): string[] {
@@ -81,17 +82,7 @@ export default async function ExamDetails({ params }: { params: Promise<{ id: st
           </a>
 
           {/* Status Dropdown */}
-          <form action={async (fd: FormData) => {
-            'use server'
-            await updateExamStatus(id, fd.get('status') as string)
-          }} className="flex gap-2 surface-card p-1.5">
-            <select name="status" defaultValue={exam?.status} className="h-9 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm">
-              <option value="draft">Draft</option>
-              <option value="live">Live</option>
-              <option value="closed">Closed</option>
-            </select>
-            <button className="rounded-md border bg-white px-4 py-1.5 text-sm font-medium hover:bg-surface-soft">Update</button>
-          </form>
+          <StatusUpdateForm examId={id} currentStatus={exam?.status || 'draft'} />
 
           {/* Delete Exam */}
           <DeleteExamButton examId={id} />
