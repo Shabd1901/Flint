@@ -266,7 +266,12 @@ CREATE POLICY "Maintainer read all profiles" ON profiles FOR SELECT USING (get_u
 -- orgs
 DROP POLICY IF EXISTS "Admin access own orgs" ON orgs;
 DROP POLICY IF EXISTS "Candidate read orgs" ON orgs;
-CREATE POLICY "Admin access own orgs" ON orgs FOR ALL USING (is_org_admin(id) OR get_user_role() = 'maintainer');
+
+CREATE POLICY "Admin select own orgs" ON orgs FOR SELECT USING (is_org_admin(id) OR get_user_role() = 'maintainer');
+CREATE POLICY "Admin update own orgs" ON orgs FOR UPDATE USING (is_org_admin(id) OR get_user_role() = 'maintainer');
+CREATE POLICY "Admin delete own orgs" ON orgs FOR DELETE USING (is_org_admin(id) OR get_user_role() = 'maintainer');
+CREATE POLICY "Admin insert own orgs" ON orgs FOR INSERT WITH CHECK (admin_id = auth.uid() OR get_user_role() = 'maintainer');
+
 CREATE POLICY "Candidate read orgs" ON orgs FOR SELECT USING (is_enrolled(id));
 
 -- org_admins

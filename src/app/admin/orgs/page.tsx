@@ -8,10 +8,14 @@ export default async function AdminOrgs() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: orgs } = await supabase
+  const { data: orgs, error } = await supabase
     .from('orgs')
     .select('*, org_admins(admin_id, profiles(name, email))')
     .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching orgs:', error)
+  }
 
   return (
     <div className="container-page py-6 md:py-8 space-y-6 max-w-5xl">
