@@ -16,7 +16,7 @@ GRANT ALL ON SCHEMA public TO service_role;
 -- 2. Create Enums
 CREATE TYPE user_role AS ENUM ('maintainer', 'admin', 'candidate');
 CREATE TYPE exam_status AS ENUM ('draft', 'live', 'closed');
-CREATE TYPE question_type AS ENUM ('single', 'multi');
+CREATE TYPE question_type AS ENUM ('single', 'multi', 'true_false', 'short_answer', 'long_answer', 'fill_blank', 'numerical', 'file_upload');
 CREATE TYPE attempt_status AS ENUM ('in_progress', 'submitted', 'auto_submitted');
 CREATE TYPE violation_type AS ENUM ('tab_switch', 'fullscreen_exit', 'blur', 'multi_session', 'devtools');
 
@@ -31,10 +31,16 @@ CREATE TABLE profiles (
 
 CREATE TABLE orgs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    admin_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    admin_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     invite_code TEXT UNIQUE DEFAULT substr(md5(random()::text), 1, 8),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE org_admins (
+    org_id UUID NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
+    admin_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    PRIMARY KEY (org_id, admin_id)
 );
 
 CREATE TABLE enrollments (
@@ -67,6 +73,11 @@ CREATE TABLE questions (
     type question_type NOT NULL,
     options JSONB NOT NULL,
     correct_options JSONB NOT NULL,
+    correct_text TEXT,
+    correct_number NUMERIC,
+    tolerance NUMERIC,
+    max_words INT,
+    file_types TEXT[],
     marks NUMERIC NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -88,7 +99,11 @@ CREATE TABLE exam_answers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     attempt_id UUID NOT NULL REFERENCES exam_attempts(id) ON DELETE CASCADE,
     question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
-    selected_options JSONB NOT NULL
+    selected_options JSONB,
+    text_answer TEXT,
+    number_answer NUMERIC,
+    file_url TEXT,
+    marks_awarded NUMERIC
 );
 
 CREATE TABLE assignments (
@@ -98,6 +113,7 @@ CREATE TABLE assignments (
     instructions TEXT NOT NULL,
     due_at TIMESTAMPTZ NOT NULL,
     max_score NUMERIC NOT NULL,
+    submission_types TEXT[] DEFAULT '{file,link,text}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -107,6 +123,7 @@ CREATE TABLE assignment_submissions (
     candidate_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     file_url TEXT,
     link_url TEXT,
+    text_answer TEXT,
     submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_late BOOLEAN NOT NULL DEFAULT false,
     score NUMERIC,
@@ -179,6 +196,7 @@ CREATE TABLE code_submissions (
 -- 4. Enable Row-Level Security on All Tables
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orgs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE org_admins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE exams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
@@ -203,7 +221,11 @@ $$;
 CREATE OR REPLACE FUNCTION is_org_admin(check_org_id UUID) RETURNS BOOLEAN
 LANGUAGE sql SECURITY DEFINER SET search_path = public
 AS $$
-  SELECT EXISTS (SELECT 1 FROM orgs WHERE id = check_org_id AND admin_id = auth.uid());
+  SELECT EXISTS (
+    SELECT 1 FROM orgs WHERE id = check_org_id AND admin_id = auth.uid()
+    UNION
+    SELECT 1 FROM org_admins WHERE org_id = check_org_id AND admin_id = auth.uid()
+  );
 $$;
 
 CREATE OR REPLACE FUNCTION is_enrolled(check_org_id UUID) RETURNS BOOLEAN
@@ -244,8 +266,13 @@ CREATE POLICY "Maintainer read all profiles" ON profiles FOR SELECT USING (get_u
 -- orgs
 DROP POLICY IF EXISTS "Admin access own orgs" ON orgs;
 DROP POLICY IF EXISTS "Candidate read orgs" ON orgs;
-CREATE POLICY "Admin access own orgs" ON orgs FOR ALL USING (admin_id = auth.uid());
+CREATE POLICY "Admin access own orgs" ON orgs FOR ALL USING (is_org_admin(id) OR get_user_role() = 'maintainer');
 CREATE POLICY "Candidate read orgs" ON orgs FOR SELECT USING (is_enrolled(id));
+
+-- org_admins
+CREATE POLICY "Admins can view their org admins" ON org_admins FOR SELECT USING (is_org_admin(org_id) OR get_user_role() = 'maintainer');
+CREATE POLICY "Admins can insert org admins" ON org_admins FOR INSERT WITH CHECK (is_org_admin(org_id) OR get_user_role() = 'maintainer');
+CREATE POLICY "Admins can delete org admins" ON org_admins FOR DELETE USING (is_org_admin(org_id) OR get_user_role() = 'maintainer');
 
 -- enrollments
 CREATE POLICY "Admin access enrollments" ON enrollments FOR ALL USING (is_org_admin(org_id));
@@ -403,5 +430,19 @@ CREATE POLICY "Authenticated Upload Assignment Files"
 ON storage.objects FOR INSERT
 WITH CHECK (
   bucket_id = 'assignment-submissions' 
+  AND auth.role() = 'authenticated'
+);
+
+-- 9. Storage Bucket for Exam Uploads
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('exam-uploads', 'exam-uploads', true)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE POLICY "Public Read Exam Files" ON storage.objects
+FOR SELECT USING (bucket_id = 'exam-uploads');
+
+CREATE POLICY "Authenticated Upload Exam Files" ON storage.objects
+FOR INSERT WITH CHECK (
+  bucket_id = 'exam-uploads' 
   AND auth.role() = 'authenticated'
 );
