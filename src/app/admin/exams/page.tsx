@@ -7,8 +7,7 @@ import { FileText, Users } from 'lucide-react'
 export default async function AdminExams() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  
-  const { data: org } = await supabase.from('orgs').select('id').eq('admin_id', user!.id).limit(1).single()
+  const { data: org } = await supabase.from('orgs').select('id').limit(1).single()
 
   // Fetch exams with question and attempt counts
   let exams: any[] = []

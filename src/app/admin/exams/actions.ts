@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation'
 export async function createExam(formData: FormData) {
   const s = await createClient()
   const { data: { user } } = await s.auth.getUser()
-  const { data: o } = await s.from('orgs').select('id').eq('admin_id', user!.id).limit(1).single()
+  const { data: o } = await s.from('orgs').select('id').limit(1).single()
 
   await s.from('exams').insert({
     org_id: o!.id,
@@ -32,7 +32,7 @@ export async function deleteExam(examId: string) {
 export async function duplicateExam(examId: string) {
   const s = await createClient()
   const { data: { user } } = await s.auth.getUser()
-  const { data: o } = await s.from('orgs').select('id').eq('admin_id', user!.id).limit(1).single()
+  const { data: o } = await s.from('orgs').select('id').limit(1).single()
 
   // Fetch original exam
   const { data: original } = await s.from('exams').select('*').eq('id', examId).single()
