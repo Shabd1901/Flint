@@ -1,8 +1,15 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatDate, formatDateTime } from '@/utils/formatDate'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
-export default async function MaintainerDashboard() {
+export default async function MaintainerDashboard({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+  const { page } = await searchParams
+  const currentPage = Number(page) || 1
+  const PAGE_SIZE = 10
+  const from = (currentPage - 1) * PAGE_SIZE
+  const to = from + PAGE_SIZE - 1
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -15,7 +22,13 @@ export default async function MaintainerDashboard() {
     redirect('/')
   }
 
-  const { data: orgs } = await supabase.from('orgs').select('id, name, created_at, invite_code, profiles(name, email)')
+  const { data: orgs, count: totalOrgsCount } = await supabase
+    .from('orgs')
+    .select('id, name, created_at, invite_code, profiles(name, email)', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(from, to)
+  const totalOrgs = totalOrgsCount || 0
+
   const { data: exams } = await supabase.from('exams').select('id, title, status, orgs(name)')
   const { data: allProfiles } = await supabase.from('profiles').select('id, name, email, role').order('created_at', { ascending: false })
   const { data: violations } = await supabase
@@ -67,7 +80,7 @@ export default async function MaintainerDashboard() {
       <section className="grid gap-4 md:grid-cols-4">
         <article className="surface-card hover-lift p-5">
           <p className="text-sm text-text-muted">Organizations</p>
-          <p className="mt-2 font-mono text-3xl font-semibold">{orgs?.length || 0}</p>
+          <p className="mt-2 font-mono text-3xl font-semibold">{totalOrgs}</p>
         </article>
         <article className="surface-card hover-lift p-5">
           <p className="text-sm text-text-muted">Exams</p>
@@ -131,6 +144,36 @@ export default async function MaintainerDashboard() {
               )}
             </tbody>
           </table>
+
+          {/* Pagination Controls */}
+          {totalOrgs > PAGE_SIZE && (
+            <div className="flex items-center justify-between border-t pt-4 mt-6">
+              <p className="text-sm text-text-muted">
+                Showing <span className="font-medium">{from + 1}</span> to <span className="font-medium">{Math.min(to + 1, totalOrgs)}</span> of <span className="font-medium">{totalOrgs}</span> orgs
+              </p>
+              <div className="flex gap-2">
+                {currentPage > 1 ? (
+                  <a href={`/maintainer?page=${currentPage - 1}`} className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-surface-soft transition">
+                    <ChevronLeft size={16} /> Prev
+                  </a>
+                ) : (
+                  <button disabled className="inline-flex items-center gap-1 rounded-md border bg-surface-soft px-3 py-1.5 text-sm font-medium text-text-muted opacity-50 cursor-not-allowed">
+                    <ChevronLeft size={16} /> Prev
+                  </button>
+                )}
+                
+                {currentPage * PAGE_SIZE < totalOrgs ? (
+                  <a href={`/maintainer?page=${currentPage + 1}`} className="inline-flex items-center gap-1 rounded-md border bg-white px-3 py-1.5 text-sm font-medium hover:bg-surface-soft transition">
+                    Next <ChevronRight size={16} />
+                  </a>
+                ) : (
+                  <button disabled className="inline-flex items-center gap-1 rounded-md border bg-surface-soft px-3 py-1.5 text-sm font-medium text-text-muted opacity-50 cursor-not-allowed">
+                    Next <ChevronRight size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
