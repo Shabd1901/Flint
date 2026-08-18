@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -22,10 +23,27 @@ export async function login(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (user) {
     const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    if (profile?.role === 'maintainer') redirect('/maintainer')
-    if (profile?.role === 'admin') redirect('/admin')
-    if (profile?.role === 'candidate') redirect('/candidate')
+    let role = profile?.role
+
+    if (!role) {
+      // Auto-heal profile if it was lost during schema reset
+      const adminClient = createAdminClient()
+      const fallbackRole = (user.email?.includes('maintainer') ? 'maintainer' : user.email?.includes('admin') ? 'admin' : 'candidate') as any
+      const name = user.user_metadata?.name || user.email?.split('@')[0] || 'User'
+      
+      await adminClient.from('profiles').upsert({
+        id: user.id,
+        role: fallbackRole,
+        name: name,
+        email: user.email || ''
+      })
+      role = fallbackRole
+    }
+
+    if (role === 'maintainer') redirect('/maintainer')
+    if (role === 'admin') redirect('/admin')
+    if (role === 'candidate') redirect('/candidate')
   }
 
-  redirect('/')
+  redirect('/candidate')
 }
