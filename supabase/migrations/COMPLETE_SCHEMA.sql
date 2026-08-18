@@ -1,7 +1,7 @@
 -- ============================================================================
 -- FLINT — ALL-IN-ONE MASTER DATABASE MIGRATION SCRIPT
 -- Copy & paste this entire script into your Supabase SQL Editor (New Query) and click Run.
--- It resets schema public cleanly and builds all tables, enums, indexes, functions, 
+-- It resets schema public cleanly and builds all tables, enums, indexes, functions,
 -- storage buckets, and non-recursive RLS policies for every role and feature.
 -- ============================================================================
 
@@ -473,7 +473,7 @@ USING (bucket_id = 'assignment-submissions');
 CREATE POLICY "Authenticated Upload Assignment Files"
 ON storage.objects FOR INSERT
 WITH CHECK (
-  bucket_id = 'assignment-submissions' 
+  bucket_id = 'assignment-submissions'
   AND auth.role() = 'authenticated'
 );
 
@@ -490,56 +490,8 @@ FOR SELECT USING (bucket_id = 'exam-uploads');
 
 CREATE POLICY "Authenticated Upload Exam Files" ON storage.objects
 FOR INSERT WITH CHECK (
-  bucket_id = 'exam-uploads' 
+  bucket_id = 'exam-uploads'
   AND auth.role() = 'authenticated'
 );
-
--- 10. Seed Accounts (2 Maintainers, 2 Admins, 2 Candidates with password: password123)
-CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
-
-DELETE FROM auth.users WHERE email IN ('m1@test.com', 'm2@test.com', 'a1@test.com', 'a2@test.com', 'c1@test.com', 'c2@test.com');
-
-DO $$
-DECLARE
-    m1_id UUID := '10000000-0000-0000-0000-000000000001';
-    m2_id UUID := '10000000-0000-0000-0000-000000000002';
-    a1_id UUID := '20000000-0000-0000-0000-000000000001';
-    a2_id UUID := '20000000-0000-0000-0000-000000000002';
-    c1_id UUID := '30000000-0000-0000-0000-000000000001';
-    c2_id UUID := '30000000-0000-0000-0000-000000000002';
-    enc_pass TEXT := extensions.crypt('password123', extensions.gen_salt('bf', 10));
-BEGIN
-
-    -- Create Auth Users
-    INSERT INTO auth.users (id, instance_id, email, encrypted_password, email_confirmed_at, aud, role, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin)
-    VALUES
-    (m1_id, '00000000-0000-0000-0000-000000000000', 'm1@test.com', enc_pass, NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Maintainer One"}', false),
-    (m2_id, '00000000-0000-0000-0000-000000000000', 'm2@test.com', enc_pass, NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Maintainer Two"}', false),
-    (a1_id, '00000000-0000-0000-0000-000000000000', 'a1@test.com', enc_pass, NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Admin One"}', false),
-    (a2_id, '00000000-0000-0000-0000-000000000000', 'a2@test.com', enc_pass, NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Admin Two"}', false),
-    (c1_id, '00000000-0000-0000-0000-000000000000', 'c1@test.com', enc_pass, NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Candidate One"}', false),
-    (c2_id, '00000000-0000-0000-0000-000000000000', 'c2@test.com', enc_pass, NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Candidate Two"}', false);
-
-    -- Create Auth Identities (REQUIRED by Supabase GoTrue for email auth)
-    INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-    VALUES
-    (m1_id, m1_id, m1_id::text, jsonb_build_object('sub', m1_id::text, 'email', 'm1@test.com'), 'email', NOW(), NOW(), NOW()),
-    (m2_id, m2_id, m2_id::text, jsonb_build_object('sub', m2_id::text, 'email', 'm2@test.com'), 'email', NOW(), NOW(), NOW()),
-    (a1_id, a1_id, a1_id::text, jsonb_build_object('sub', a1_id::text, 'email', 'a1@test.com'), 'email', NOW(), NOW(), NOW()),
-    (a2_id, a2_id, a2_id::text, jsonb_build_object('sub', a2_id::text, 'email', 'a2@test.com'), 'email', NOW(), NOW(), NOW()),
-    (c1_id, c1_id, c1_id::text, jsonb_build_object('sub', c1_id::text, 'email', 'c1@test.com'), 'email', NOW(), NOW(), NOW()),
-    (c2_id, c2_id, c2_id::text, jsonb_build_object('sub', c2_id::text, 'email', 'c2@test.com'), 'email', NOW(), NOW(), NOW());
-
-    -- Create Public Profiles
-    INSERT INTO public.profiles (id, role, name, email)
-    VALUES
-    (m1_id, 'maintainer', 'Maintainer One', 'm1@test.com'),
-    (m2_id, 'maintainer', 'Maintainer Two', 'm2@test.com'),
-    (a1_id, 'admin', 'Admin One', 'a1@test.com'),
-    (a2_id, 'admin', 'Admin Two', 'a2@test.com'),
-    (c1_id, 'candidate', 'Candidate One', 'c1@test.com'),
-    (c2_id, 'candidate', 'Candidate Two', 'c2@test.com');
-
-END $$;
 
 
