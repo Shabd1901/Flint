@@ -521,14 +521,14 @@ BEGIN
     (c2_id, '00000000-0000-0000-0000-000000000000', 'c2@test.com', enc_pass, NOW(), 'authenticated', 'authenticated', NOW(), NOW(), '{"provider":"email","providers":["email"]}', '{"name":"Candidate Two"}', false);
 
     -- Create Auth Identities (REQUIRED by Supabase GoTrue for email auth)
-    INSERT INTO auth.identities (id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+    INSERT INTO auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
     VALUES
-    (m1_id, m1_id, jsonb_build_object('sub', m1_id::text, 'email', 'm1@test.com'), 'email', NOW(), NOW(), NOW()),
-    (m2_id, m2_id, jsonb_build_object('sub', m2_id::text, 'email', 'm2@test.com'), 'email', NOW(), NOW(), NOW()),
-    (a1_id, a1_id, jsonb_build_object('sub', a1_id::text, 'email', 'a1@test.com'), 'email', NOW(), NOW(), NOW()),
-    (a2_id, a2_id, jsonb_build_object('sub', a2_id::text, 'email', 'a2@test.com'), 'email', NOW(), NOW(), NOW()),
-    (c1_id, c1_id, jsonb_build_object('sub', c1_id::text, 'email', 'c1@test.com'), 'email', NOW(), NOW(), NOW()),
-    (c2_id, c2_id, jsonb_build_object('sub', c2_id::text, 'email', 'c2@test.com'), 'email', NOW(), NOW(), NOW());
+    (m1_id, m1_id, m1_id::text, jsonb_build_object('sub', m1_id::text, 'email', 'm1@test.com'), 'email', NOW(), NOW(), NOW()),
+    (m2_id, m2_id, m2_id::text, jsonb_build_object('sub', m2_id::text, 'email', 'm2@test.com'), 'email', NOW(), NOW(), NOW()),
+    (a1_id, a1_id, a1_id::text, jsonb_build_object('sub', a1_id::text, 'email', 'a1@test.com'), 'email', NOW(), NOW(), NOW()),
+    (a2_id, a2_id, a2_id::text, jsonb_build_object('sub', a2_id::text, 'email', 'a2@test.com'), 'email', NOW(), NOW(), NOW()),
+    (c1_id, c1_id, c1_id::text, jsonb_build_object('sub', c1_id::text, 'email', 'c1@test.com'), 'email', NOW(), NOW(), NOW()),
+    (c2_id, c2_id, c2_id::text, jsonb_build_object('sub', c2_id::text, 'email', 'c2@test.com'), 'email', NOW(), NOW(), NOW());
 
     -- Create Public Profiles
     INSERT INTO public.profiles (id, role, name, email)
