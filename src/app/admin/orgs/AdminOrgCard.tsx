@@ -1,14 +1,17 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Building, Trash2, Key, Users, X, RefreshCw, UserPlus } from 'lucide-react'
-import { deleteOrg, addCoAdminAction, removeCoAdminAction } from './actions'
+import { Building, Trash2, Key, Users, X, RefreshCw, UserPlus, Edit2, Check } from 'lucide-react'
+import { deleteOrg, addCoAdminAction, removeCoAdminAction, updateOrg } from './actions'
 
 export function AdminOrgCard({ org, currentUserId }: { org: any, currentUserId: string }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [isPending, startTransition] = useTransition()
   
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [editName, setEditName] = useState(org.name)
+
   const [showAdmins, setShowAdmins] = useState(false)
   const [newAdminEmail, setNewAdminEmail] = useState('')
   const [feedback, setFeedback] = useState<{ type: 'success'|'error', msg: string } | null>(null)
@@ -26,6 +29,20 @@ export function AdminOrgCard({ org, currentUserId }: { org: any, currentUserId: 
       } else {
         setShowDeleteModal(false)
       }
+    })
+  }
+
+  const handleRename = () => {
+    if (!editName.trim() || editName.trim() === org.name) {
+      setIsEditingName(false)
+      return
+    }
+    startTransition(async () => {
+      const formData = new FormData()
+      formData.append('id', org.id)
+      formData.append('name', editName.trim())
+      await updateOrg(formData)
+      setIsEditingName(false)
     })
   }
 
@@ -68,11 +85,40 @@ export function AdminOrgCard({ org, currentUserId }: { org: any, currentUserId: 
   return (
     <div className="surface-card p-5 group flex flex-col gap-4">
       <div className="flex justify-between items-start">
-        <div>
+        <div className="flex-1 mr-4">
           <div className="flex items-center gap-2">
-            <Building className="w-5 h-5 text-accent" />
-            <h2 className="text-lg font-semibold">{org.name}</h2>
-            {!isOwner && <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-medium">Co-Admin</span>}
+            <Building className="w-5 h-5 text-accent flex-shrink-0" />
+            {isEditingName ? (
+              <div className="flex items-center gap-2 flex-1">
+                <input 
+                  autoFocus
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleRename()
+                    if (e.key === 'Escape') { setIsEditingName(false); setEditName(org.name) }
+                  }}
+                  disabled={isPending}
+                  className="h-8 rounded border px-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-accent w-full max-w-xs"
+                />
+                <button onClick={handleRename} disabled={isPending} className="p-1.5 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 rounded">
+                  {isPending ? <RefreshCw size={14} className="animate-spin" /> : <Check size={14} />}
+                </button>
+                <button onClick={() => { setIsEditingName(false); setEditName(org.name) }} disabled={isPending} className="p-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded">
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-lg font-semibold truncate" title={org.name}>{org.name}</h2>
+                {isOwner && (
+                  <button onClick={() => setIsEditingName(true)} className="text-text-muted hover:text-accent opacity-0 group-hover:opacity-100 transition">
+                    <Edit2 size={14} />
+                  </button>
+                )}
+                {!isOwner && <span className="text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-medium">Co-Admin</span>}
+              </>
+            )}
           </div>
           <div className="mt-2 flex items-center gap-2 text-sm text-text-muted">
             <Key className="w-4 h-4" />

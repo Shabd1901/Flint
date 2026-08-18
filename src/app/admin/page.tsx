@@ -6,13 +6,26 @@ import Link from 'next/link'
 import { IntegrityFeed } from './IntegrityFeed'
 import { Activity, Users, ShieldCheck, CheckCircle2 } from 'lucide-react'
 
-export default async function AdminDashboard() {
+export default async function AdminDashboard({ searchParams }: { searchParams: Promise<{ org_id?: string }> }) {
+  const { org_id: selectedOrgId } = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase.from('profiles').select('name, email').eq('id', user.id).single()
-  const { data: org } = await supabase.from('orgs').select('id, name, invite_code').eq('admin_id', user.id).limit(1).single()
+  
+  // Fetch ALL accessible orgs for this admin
+  const { data: allOrgs } = await supabase.from('orgs').select('id, name, invite_code').order('created_at', { ascending: true })
+  
+  // Determine active org
+  let org = null
+  if (allOrgs && allOrgs.length > 0) {
+    if (selectedOrgId) {
+      org = allOrgs.find(o => o.id === selectedOrgId) || allOrgs[0]
+    } else {
+      org = allOrgs[0]
+    }
+  }
 
   let examCount = 0
   let candidateCount = 0
@@ -128,15 +141,28 @@ export default async function AdminDashboard() {
         </div>
 
         {org && (
-          <div className="flex items-center gap-4 bg-white border shadow-sm px-4 py-2 rounded-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-white border shadow-sm px-4 py-3 rounded-lg">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-              <span className="text-sm font-medium">Server Health: Optimal</span>
+              <span className="text-sm text-text-muted font-medium whitespace-nowrap">Active Context:</span>
+              <form>
+                <select 
+                  name="org_id" 
+                  defaultValue={org.id} 
+                  onChange="this.form.submit()"
+                  className="bg-surface-soft border border-line rounded-md text-sm font-semibold px-2 py-1 outline-none focus:ring-2 focus:ring-accent w-48"
+                >
+                  {allOrgs?.map(o => (
+                    <option key={o.id} value={o.id}>{o.name}</option>
+                  ))}
+                </select>
+              </form>
             </div>
-            <div className="w-px h-4 bg-line"></div>
-            <div className="text-sm">
-              <span className="text-text-muted mr-2">Org Code:</span>
-              <code className="bg-surface-soft px-2 py-0.5 rounded font-mono font-semibold">{org.invite_code}</code>
+            
+            <div className="hidden sm:block w-px h-4 bg-line"></div>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-text-muted">Invite Code:</span>
+              <code className="bg-surface-soft px-2 py-0.5 rounded font-mono font-semibold text-accent">{org.invite_code}</code>
             </div>
           </div>
         )}

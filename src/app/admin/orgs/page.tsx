@@ -10,11 +10,31 @@ export default async function AdminOrgs() {
 
   const { data: orgs, error } = await supabase
     .from('orgs')
-    .select('*, org_admins(admin_id, profiles(name, email))')
+    .select('*, org_admins(admin_id)')
     .order('created_at', { ascending: false })
 
   if (error) {
     console.error('Error fetching orgs:', error)
+  }
+
+  let finalOrgs = orgs || []
+  if (finalOrgs.length > 0) {
+    const adminIds = new Set<string>()
+    finalOrgs.forEach(o => {
+      adminIds.add(o.admin_id)
+      o.org_admins?.forEach((ca: any) => adminIds.add(ca.admin_id))
+    })
+
+    const { data: profiles } = await supabase.from('profiles').select('id, name, email').in('id', Array.from(adminIds))
+    const profileMap = new Map(profiles?.map(p => [p.id, p]))
+
+    finalOrgs = finalOrgs.map(o => ({
+      ...o,
+      org_admins: o.org_admins?.map((ca: any) => ({
+        ...ca,
+        profiles: profileMap.get(ca.admin_id)
+      }))
+    }))
   }
 
   return (
@@ -28,8 +48,8 @@ export default async function AdminOrgs() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-6 items-start">
         <div className="space-y-4">
-          {orgs && orgs.length > 0 ? (
-            orgs.map(org => (
+          {finalOrgs && finalOrgs.length > 0 ? (
+            finalOrgs.map(org => (
               <AdminOrgCard key={org.id} org={org} currentUserId={user.id} />
             ))
           ) : (
