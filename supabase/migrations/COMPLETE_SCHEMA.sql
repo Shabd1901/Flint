@@ -126,6 +126,7 @@ CREATE TABLE assignments (
     due_at TIMESTAMPTZ NOT NULL,
     max_score NUMERIC NOT NULL DEFAULT 100,
     submission_types TEXT[] DEFAULT '{file,link,text}',
+    allowed_file_types TEXT[] DEFAULT '{pdf,csv,doc,md,xlsx}',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

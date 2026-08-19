@@ -11,20 +11,17 @@ export default async function AdminAssignments({ params }: { params: Promise<{ o
 
   async function createAssignment(formData: FormData) {
     'use server'
-    const { createClient: createSB } = await import('@supabase/supabase-js')
-    const adminClient = createSB(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    )
-    
+    const sb = await createClient()
+    const { data: { user } } = await sb.auth.getUser()
+    if (!user) return
+
     const subTypesRaw = formData.getAll('submission_types').map(String)
     const submission_types = subTypesRaw.length > 0 ? subTypesRaw : ['file', 'link', 'text']
 
     const allowedTypesRaw = formData.getAll('allowed_file_types').map(String)
     const allowed_file_types = allowedTypesRaw.length > 0 ? allowedTypesRaw : ['pdf', 'csv', 'doc', 'md', 'xlsx']
 
-    await adminClient.from('assignments').insert({
+    await sb.from('assignments').insert({
       org_id: org_id,
       title: formData.get('title'),
       instructions: formData.get('instructions'),
