@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { formatDate, formatDateTime } from '@/utils/formatDate'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { UserManagementList, UserProfile } from './UserManagementList'
 
 export default async function MaintainerDashboard({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const { page } = await searchParams
@@ -37,6 +38,13 @@ export default async function MaintainerDashboard({ searchParams }: { searchPara
     .order('occurred_at', { ascending: false })
     .limit(10)
 
+  const usersList: UserProfile[] = (allProfiles || []).map(p => ({
+    id: p.id,
+    name: p.name || '',
+    email: p.email || '',
+    role: p.role || 'candidate'
+  }))
+
   async function createAdmin(formData: FormData) {
     'use server'
     const { createClient: createSB } = await import('@supabase/supabase-js')
@@ -70,8 +78,8 @@ export default async function MaintainerDashboard({ searchParams }: { searchPara
   }
 
   return (
-    <div className="container-page py-6 md:py-8">
-      <header className="mb-6 surface-card p-5">
+    <div className="container-page py-6 md:py-8 space-y-6">
+      <header className="surface-card p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">Maintainer control</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">Cross-org operations dashboard</h1>
         <p className="mt-1 text-sm text-text-muted">Global visibility for health, integrity, and intervention.</p>
@@ -96,7 +104,7 @@ export default async function MaintainerDashboard({ searchParams }: { searchPara
         </article>
       </section>
 
-      <section className="mt-4 surface-card p-5">
+      <section className="surface-card p-5">
         <h2 className="text-lg font-semibold">Create Admin Account</h2>
         <p className="text-sm text-text-muted mt-1">Only maintainers can create admin accounts.</p>
         <form action={createAdmin} className="mt-4 flex flex-wrap gap-3 items-end">
@@ -114,6 +122,11 @@ export default async function MaintainerDashboard({ searchParams }: { searchPara
           </label>
           <button className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-white hover:bg-accent-strong transition">Create Admin</button>
         </form>
+      </section>
+
+      {/* User Management Section */}
+      <section className="surface-card p-5">
+        <UserManagementList users={usersList} />
       </section>
 
       <section className="mt-4 surface-card p-5">

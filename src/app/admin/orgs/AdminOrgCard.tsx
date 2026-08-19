@@ -51,6 +51,7 @@ export function AdminOrgCard({ org, currentUserId }: { org: any, currentUserId: 
 
   const handleAddAdmin = (e: React.FormEvent) => {
     e.preventDefault()
+    setFeedback(null)
     if (!newAdminEmail.trim()) return
 
     startTransition(async () => {
@@ -68,15 +69,17 @@ export function AdminOrgCard({ org, currentUserId }: { org: any, currentUserId: 
     })
   }
 
-  const handleRemoveAdmin = (adminId: string) => {
-    if (!confirm('Are you sure you want to remove this admin?')) return
+  const confirmRemoveAdmin = () => {
+    if (!adminToRemove) return
+    const targetAdminId = adminToRemove.id
     
     startTransition(async () => {
       const formData = new FormData()
       formData.append('orgId', org.id)
-      formData.append('adminId', adminId)
+      formData.append('adminId', targetAdminId)
       
       const res = await removeCoAdminAction(formData)
+      setAdminToRemove(null)
       if (res?.error) {
         setFeedback({ type: 'error', msg: res.error })
       } else {
@@ -202,8 +205,8 @@ export function AdminOrgCard({ org, currentUserId }: { org: any, currentUserId: 
                         </div>
                         {isOwner && (
                           <button 
-                            onClick={() => handleRemoveAdmin(ca.admin_id)}
-                            disabled={isPending}
+                            onClick={() => setAdminToRemove({ id: ca.admin_id, name: ca.profiles?.name || ca.profiles?.email })}
+                            disabled={isPending && adminToRemove?.id === ca.admin_id}
                             className="text-text-muted hover:text-rose-500 p-1"
                             title="Remove Admin"
                           >
@@ -300,6 +303,18 @@ export function AdminOrgCard({ org, currentUserId }: { org: any, currentUserId: 
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!adminToRemove}
+        title="Remove Co-Admin"
+        message={`Are you sure you want to remove co-admin "${adminToRemove?.name || 'this admin'}" from ${org.name}?`}
+        confirmText="Remove Co-Admin"
+        confirmVariant="danger"
+        icon="user-x"
+        isLoading={isPending}
+        onConfirm={confirmRemoveAdmin}
+        onClose={() => setAdminToRemove(null)}
+      />
     </>
   )
 }

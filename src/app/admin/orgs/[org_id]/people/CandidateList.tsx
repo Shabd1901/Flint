@@ -5,6 +5,8 @@ import { Search, UserX, Copy, Check, Shield, GraduationCap, RefreshCw, X, AlertT
 import { formatDate } from '@/utils/formatDate'
 import { removeCandidateAction } from './actions'
 
+import { ConfirmModal } from '@/components/ConfirmModal'
+
 export interface TeacherMember {
   id: string
   name: string
@@ -35,7 +37,7 @@ export function CandidateList({
   const [search, setSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [copied, setCopied] = useState(false)
-  const [removingId, setRemovingId] = useState<string | null>(null)
+  const [removingCandidate, setRemovingCandidate] = useState<{ id: string; name: string } | null>(null)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -62,12 +64,12 @@ export function CandidateList({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const handleRemove = (candidateId: string, name: string) => {
-    if (!confirm(`Are you sure you want to remove ${name} from this classroom?`)) return
-    setRemovingId(candidateId)
+  const confirmRemove = () => {
+    if (!removingCandidate) return
+    const candidateId = removingCandidate.id
     startTransition(async () => {
       const res = await removeCandidateAction(orgId, candidateId)
-      setRemovingId(null)
+      setRemovingCandidate(null)
       if (res.error) {
         setFeedback({ type: 'error', msg: res.error })
       } else {
@@ -229,12 +231,12 @@ export function CandidateList({
                     )}
 
                     <button
-                      onClick={() => handleRemove(c.id, c.name)}
-                      disabled={isPending && removingId === c.id}
+                      onClick={() => setRemovingCandidate({ id: c.id, name: c.name })}
+                      disabled={isPending && removingCandidate?.id === c.id}
                       className="p-2 rounded-lg text-text-muted hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition disabled:opacity-50"
                       title="Remove from classroom"
                     >
-                      {isPending && removingId === c.id ? <RefreshCw size={16} className="animate-spin" /> : <UserX size={16} />}
+                      {isPending && removingCandidate?.id === c.id ? <RefreshCw size={16} className="animate-spin" /> : <UserX size={16} />}
                     </button>
                   </div>
                 </div>
@@ -290,6 +292,18 @@ export function CandidateList({
           </div>
         )}
       </section>
+
+      <ConfirmModal
+        isOpen={!!removingCandidate}
+        title="Remove Candidate"
+        message={`Are you sure you want to remove ${removingCandidate?.name || 'this candidate'} from this classroom? They will lose access to classroom exams and assignments.`}
+        confirmText="Remove Candidate"
+        confirmVariant="danger"
+        icon="user-x"
+        isLoading={isPending}
+        onConfirm={confirmRemove}
+        onClose={() => setRemovingCandidate(null)}
+      />
     </div>
   )
 }

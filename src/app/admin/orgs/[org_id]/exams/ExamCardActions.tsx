@@ -1,17 +1,19 @@
 'use client'
 
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 import { Trash2, Copy } from 'lucide-react'
 import { deleteExam, duplicateExam } from './actions'
 import { toast } from 'react-hot-toast'
+import { ConfirmModal } from '@/components/ConfirmModal'
 
 export function ExamCardActions({ examId, orgId }: { examId: string, orgId: string }) {
   const [isPending, startTransition] = useTransition()
+  const [showConfirm, setShowConfirm] = useState(false)
 
-  function handleDelete() {
-    if (!confirm('Delete this exam and all its questions?')) return
+  function confirmDelete() {
     startTransition(async () => {
       const res = await deleteExam(examId, orgId)
+      setShowConfirm(false)
       if (res?.error) {
         toast.error(res.error)
       } else {
@@ -32,23 +34,37 @@ export function ExamCardActions({ examId, orgId }: { examId: string, orgId: stri
   }
 
   return (
-    <div className="flex items-center gap-1">
-      <button
-        onClick={handleDuplicate}
-        disabled={isPending}
-        title="Duplicate exam"
-        className="p-1.5 rounded-md text-text-muted hover:text-accent hover:bg-accent/10 transition opacity-0 group-hover:opacity-100 disabled:opacity-50"
-      >
-        <Copy size={14} />
-      </button>
-      <button
-        onClick={handleDelete}
-        disabled={isPending}
-        title="Delete exam"
-        className="p-1.5 rounded-md text-text-muted hover:text-rose-600 hover:bg-rose-50 transition opacity-0 group-hover:opacity-100 disabled:opacity-50"
-      >
-        <Trash2 size={14} />
-      </button>
-    </div>
+    <>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={handleDuplicate}
+          disabled={isPending}
+          title="Duplicate exam"
+          className="p-1.5 rounded-md text-text-muted hover:text-accent hover:bg-accent/10 transition opacity-0 group-hover:opacity-100 disabled:opacity-50"
+        >
+          <Copy size={14} />
+        </button>
+        <button
+          onClick={() => setShowConfirm(true)}
+          disabled={isPending}
+          title="Delete exam"
+          className="p-1.5 rounded-md text-text-muted hover:text-rose-600 hover:bg-rose-50 transition opacity-0 group-hover:opacity-100 disabled:opacity-50"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+
+      <ConfirmModal
+        isOpen={showConfirm}
+        title="Delete Exam"
+        message="Are you sure you want to delete this exam and all its questions? This action cannot be undone."
+        confirmText="Delete Exam"
+        confirmVariant="danger"
+        icon="trash"
+        isLoading={isPending}
+        onConfirm={confirmDelete}
+        onClose={() => setShowConfirm(false)}
+      />
+    </>
   )
 }

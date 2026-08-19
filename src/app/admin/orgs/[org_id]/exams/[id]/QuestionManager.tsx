@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Trash2, Pencil, X, Check, Plus } from 'lucide-react'
 import { addQuestion, updateQuestion, deleteQuestion } from './actions'
+import { ConfirmModal } from '@/components/ConfirmModal'
 
 function parseArray(val: any): string[] {
   if (!val) return []
@@ -230,11 +231,14 @@ export function QuestionManager({ questions, examId, orgId }: { questions: Quest
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [showAddForm, setShowAddForm] = useState(false)
+  const [questionToDelete, setQuestionToDelete] = useState<string | null>(null)
 
-  function handleDelete(questionId: string) {
-    if (!confirm('Delete this question? This cannot be undone.')) return
-    startTransition(() => {
-      deleteQuestion(questionId, examId, orgId)
+  function confirmDelete() {
+    if (!questionToDelete) return
+    const targetId = questionToDelete
+    startTransition(async () => {
+      await deleteQuestion(targetId, examId, orgId)
+      setQuestionToDelete(null)
     })
   }
 
@@ -387,8 +391,8 @@ export function QuestionManager({ questions, examId, orgId }: { questions: Quest
                     <Pencil size={14} />
                   </button>
                   <button
-                    onClick={() => handleDelete(q.id)}
-                    disabled={isPending}
+                    onClick={() => setQuestionToDelete(q.id)}
+                    disabled={isPending && questionToDelete === q.id}
                     className="p-1.5 rounded-md text-text-muted hover:text-rose-600 hover:bg-rose-50 transition opacity-0 group-hover:opacity-100 disabled:opacity-50"
                     title="Delete question"
                   >
@@ -406,6 +410,18 @@ export function QuestionManager({ questions, examId, orgId }: { questions: Quest
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!questionToDelete}
+        title="Delete Question"
+        message="Are you sure you want to delete this question? This action cannot be undone."
+        confirmText="Delete Question"
+        confirmVariant="danger"
+        icon="trash"
+        isLoading={isPending}
+        onConfirm={confirmDelete}
+        onClose={() => setQuestionToDelete(null)}
+      />
     </div>
   )
 }
