@@ -28,7 +28,7 @@ export async function login(formData: FormData) {
     if (!role) {
       // Auto-heal profile if it was lost during schema reset
       const adminClient = createAdminClient()
-      const fallbackRole = (user.email?.includes('maintainer') ? 'maintainer' : user.email?.includes('admin') ? 'admin' : 'candidate') as any
+      const fallbackRole = 'candidate' // Secure default: never trust email strings for role escalation
       const name = user.user_metadata?.name || user.email?.split('@')[0] || 'User'
       
       await adminClient.from('profiles').upsert({
