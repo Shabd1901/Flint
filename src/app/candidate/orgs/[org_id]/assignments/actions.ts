@@ -17,6 +17,14 @@ export async function submitAssignmentAction(orgId: string, formData: FormData) 
 
     if (!assignmentId) return { error: 'Invalid assignment.' }
 
+    const hasFile = file && file.size > 0
+    const hasLink = !!linkUrl
+    const hasText = !!textAnswer
+
+    if (!hasFile && !hasLink && !hasText) {
+      return { error: 'You must provide at least a file, link, or text answer to submit.' }
+    }
+
     const adminClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,

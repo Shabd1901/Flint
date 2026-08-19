@@ -53,6 +53,23 @@ export function AssignmentSubmitForm({
 
     const formData = new FormData(e.currentTarget)
     const file = formData.get('attachment') as File | null
+    const textAnswer = formData.get('text_answer') as string
+    const githubUrl = formData.get('github_url') as string
+    
+    const subTypes = assignment.submission_types || ['file', 'link', 'text']
+    const hasFile = file && file.size > 0
+    const hasLink = !!githubUrl
+    const hasText = !!textAnswer
+    
+    let providedValidSubmission = false
+    if (subTypes.includes('file') && hasFile) providedValidSubmission = true
+    if (subTypes.includes('link') && hasLink) providedValidSubmission = true
+    if (subTypes.includes('text') && hasText) providedValidSubmission = true
+    
+    if (!providedValidSubmission) {
+      setErrorMsg('Please provide a submission (file, link, or text) as required by the assignment.')
+      return
+    }
 
     if (file && file.size > 0) {
       // 1. Check max 4MB ceiling (Vercel serverless limit is 4.5MB)
