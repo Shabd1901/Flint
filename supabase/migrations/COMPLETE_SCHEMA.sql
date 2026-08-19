@@ -11,8 +11,8 @@ CREATE SCHEMA public;
 
 GRANT ALL ON SCHEMA public TO postgres;
 GRANT ALL ON SCHEMA public TO public;
-GRANT ALL ON SCHEMA public TO anon;
-GRANT ALL ON SCHEMA public TO authenticated;
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT ALL ON SCHEMA public TO service_role;
 
 -- 2. Create Custom Enums
@@ -301,7 +301,7 @@ END
 $$;
 
 -- PROFILES
-CREATE POLICY "Users access own profile" ON profiles FOR ALL USING (id = auth.uid()) WITH CHECK (id = auth.uid());
+CREATE POLICY "Users select own profile" ON profiles FOR SELECT USING (id = auth.uid());
 CREATE POLICY "Admin read candidate profiles" ON profiles FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM enrollments
@@ -346,7 +346,8 @@ CREATE POLICY "Candidate read questions" ON questions FOR SELECT USING (
 CREATE POLICY "Admin read exam_attempts" ON exam_attempts FOR SELECT USING (
     EXISTS (SELECT 1 FROM exams WHERE exams.id = exam_id AND is_org_admin(exams.org_id))
 );
-CREATE POLICY "Candidate access own exam_attempts" ON exam_attempts FOR ALL USING (candidate_id = auth.uid());
+CREATE POLICY "Candidate select own exam_attempts" ON exam_attempts FOR SELECT USING (candidate_id = auth.uid());
+CREATE POLICY "Candidate insert own exam_attempts" ON exam_attempts FOR INSERT WITH CHECK (candidate_id = auth.uid());
 
 -- EXAM_ANSWERS
 CREATE POLICY "Admin manage exam_answers" ON exam_answers FOR ALL USING (
@@ -357,8 +358,14 @@ CREATE POLICY "Admin manage exam_answers" ON exam_answers FOR ALL USING (
         AND is_org_admin(exams.org_id)
     )
 );
-CREATE POLICY "Candidate access own exam_answers" ON exam_answers FOR ALL USING (
+CREATE POLICY "Candidate select own exam_answers" ON exam_answers FOR SELECT USING (
     EXISTS (SELECT 1 FROM exam_attempts WHERE exam_attempts.id = attempt_id AND exam_attempts.candidate_id = auth.uid())
+);
+CREATE POLICY "Candidate insert own exam_answers" ON exam_answers FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM exam_attempts WHERE exam_attempts.id = attempt_id AND exam_attempts.candidate_id = auth.uid() AND exam_attempts.status = 'in_progress')
+);
+CREATE POLICY "Candidate update own exam_answers" ON exam_answers FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM exam_attempts WHERE exam_attempts.id = attempt_id AND exam_attempts.candidate_id = auth.uid() AND exam_attempts.status = 'in_progress')
 );
 
 -- ASSIGNMENTS
@@ -369,7 +376,8 @@ CREATE POLICY "Candidate read assignments" ON assignments FOR SELECT USING (is_e
 CREATE POLICY "Admin manage assignment_submissions" ON assignment_submissions FOR ALL USING (
     EXISTS (SELECT 1 FROM assignments WHERE assignments.id = assignment_id AND is_org_admin(assignments.org_id))
 );
-CREATE POLICY "Candidate access own assignment_submissions" ON assignment_submissions FOR ALL USING (candidate_id = auth.uid());
+CREATE POLICY "Candidate select own assignment_submissions" ON assignment_submissions FOR SELECT USING (candidate_id = auth.uid());
+CREATE POLICY "Candidate insert own assignment_submissions" ON assignment_submissions FOR INSERT WITH CHECK (candidate_id = auth.uid());
 
 -- CONTESTS
 CREATE POLICY "Admin manage contests" ON contests FOR ALL USING (is_org_admin(org_id));
@@ -410,7 +418,8 @@ CREATE POLICY "Candidate read sample test_cases" ON test_cases FOR SELECT USING 
 CREATE POLICY "Admin read contest_attempts" ON contest_attempts FOR SELECT USING (
     EXISTS (SELECT 1 FROM contests WHERE contests.id = contest_id AND is_org_admin(contests.org_id))
 );
-CREATE POLICY "Candidate access own contest_attempts" ON contest_attempts FOR ALL USING (candidate_id = auth.uid());
+CREATE POLICY "Candidate select own contest_attempts" ON contest_attempts FOR SELECT USING (candidate_id = auth.uid());
+CREATE POLICY "Candidate insert own contest_attempts" ON contest_attempts FOR INSERT WITH CHECK (candidate_id = auth.uid());
 
 -- VIOLATION_EVENTS
 CREATE POLICY "Admin read violation_events" ON violation_events FOR SELECT USING (
@@ -447,14 +456,20 @@ CREATE POLICY "Admin read code_submissions" ON code_submissions FOR SELECT USING
         AND is_org_admin(contests.org_id)
     )
 );
-CREATE POLICY "Candidate access own code_submissions" ON code_submissions FOR ALL USING (
+CREATE POLICY "Candidate select own code_submissions" ON code_submissions FOR SELECT USING (
     EXISTS (SELECT 1 FROM contest_attempts WHERE contest_attempts.id = contest_attempts_id AND contest_attempts.candidate_id = auth.uid())
+);
+CREATE POLICY "Candidate insert own code_submissions" ON code_submissions FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM contest_attempts WHERE contest_attempts.id = contest_attempts_id AND contest_attempts.candidate_id = auth.uid() AND contest_attempts.status = 'in_progress')
 );
 
 -- 8. Default Schema Grants
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
-GRANT ALL PRIVILEGES ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
+GRANT EXECUTE ON ALL ROUTINES IN SCHEMA public TO authenticated;
+GRANT ALL PRIVILEGES ON ALL ROUTINES IN SCHEMA public TO service_role;
 
 -- 9. Storage Buckets & Policies
 
@@ -466,9 +481,9 @@ ON CONFLICT (id) DO NOTHING;
 DROP POLICY IF EXISTS "Public Read Assignment Files" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated Upload Assignment Files" ON storage.objects;
 
-CREATE POLICY "Public Read Assignment Files"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'assignment-submissions');
+CREATE POLICY "Users can list their own assignment files" ON storage.objects
+FOR SELECT
+USING (bucket_id = 'assignment-submissions' AND auth.uid() = owner);
 
 CREATE POLICY "Authenticated Upload Assignment Files"
 ON storage.objects FOR INSERT
@@ -485,8 +500,8 @@ ON CONFLICT (id) DO NOTHING;
 DROP POLICY IF EXISTS "Public Read Exam Files" ON storage.objects;
 DROP POLICY IF EXISTS "Authenticated Upload Exam Files" ON storage.objects;
 
-CREATE POLICY "Public Read Exam Files" ON storage.objects
-FOR SELECT USING (bucket_id = 'exam-uploads');
+CREATE POLICY "Users can list their own exam files" ON storage.objects
+FOR SELECT USING (bucket_id = 'exam-uploads' AND auth.uid() = owner);
 
 CREATE POLICY "Authenticated Upload Exam Files" ON storage.objects
 FOR INSERT WITH CHECK (
