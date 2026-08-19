@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 export async function createOrg(formData: FormData) {
@@ -47,8 +48,9 @@ export async function addCoAdminAction(formData: FormData) {
   
   if (!orgId || !email) return { error: 'Organization ID and Admin Email are required.' }
 
-  // Lookup the user by email
-  const { data: profiles, error: profileError } = await supabase
+  // Lookup the user by email using Admin Client to bypass RLS (admins can't read other admins' profiles)
+  const adminClient = createAdminClient()
+  const { data: profiles, error: profileError } = await adminClient
     .from('profiles')
     .select('id, role')
     .eq('email', email)
