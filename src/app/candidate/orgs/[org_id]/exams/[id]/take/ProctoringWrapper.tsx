@@ -9,7 +9,7 @@ const VIOLATION_LABELS: Record<string, string> = {
   fullscreen_exit: 'Exited Fullscreen Mode',
   devtools: 'Developer Tools Opened',
   multi_session: 'Concurrent Session Detected',
-  copy_paste_blocked: 'Copy/Paste Attempt Blocked'
+  copy_paste_blocked: 'Copy/Paste / Right-Click Attempt Blocked'
 }
 
 export function ProctoringWrapper({ 
@@ -117,17 +117,39 @@ export function ProctoringWrapper({
       }
     }
 
+    // Disable Right-Click (ContextMenu)
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault()
+      rateLimitedLog('copy_paste_blocked', { action: 'contextmenu_blocked' })
+    }
+
+    // Disable Copy, Paste, Cut
     const handleCopyPaste = (e: Event) => {
       e.preventDefault()
       rateLimitedLog('copy_paste_blocked', { action: e.type })
+    }
+
+    // Block keyboard copy/paste/cut shortcuts (Ctrl+C, Ctrl+V, Ctrl+X, Cmd+C, Cmd+V, Cmd+X)
+    // DO NOT block Undo (Ctrl+Z / Cmd+Z) or Redo (Ctrl+Y) so candidates can edit text freely
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey
+      const key = e.key.toLowerCase()
+
+      if (isCtrlOrCmd && (key === 'c' || key === 'v' || key === 'x')) {
+        e.preventDefault()
+        rateLimitedLog('copy_paste_blocked', { action: `shortcut_${key}` })
+      }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('blur', handleBlur)
     document.addEventListener('fullscreenchange', handleFullscreenChange)
     window.addEventListener('resize', detectDevTools)
+    document.addEventListener('contextmenu', handleContextMenu)
     document.addEventListener('copy', handleCopyPaste)
     document.addEventListener('paste', handleCopyPaste)
+    document.addEventListener('cut', handleCopyPaste)
+    document.addEventListener('keydown', handleKeyDown)
     
     return () => {
       clearInterval(heartbeatInterval)
@@ -135,8 +157,11 @@ export function ProctoringWrapper({
       window.removeEventListener('blur', handleBlur)
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
       window.removeEventListener('resize', detectDevTools)
+      document.removeEventListener('contextmenu', handleContextMenu)
       document.removeEventListener('copy', handleCopyPaste)
       document.removeEventListener('paste', handleCopyPaste)
+      document.removeEventListener('cut', handleCopyPaste)
+      document.removeEventListener('keydown', handleKeyDown)
     }
   }, [attemptId, logAction, heartbeatAction, isProctoringStarted, onWarningCountChange])
 
@@ -165,7 +190,7 @@ export function ProctoringWrapper({
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-text">Proctored Assessment Notice</h2>
           <p className="text-sm text-text-muted leading-relaxed">
-            This session is monitored for integrity. Tab switches, exiting fullscreen, opening developer tools, or opening multiple tabs will be logged and reviewed by your administrator.
+            This session is monitored for integrity. Right-clicking, copying, pasting, tab switches, exiting fullscreen, or opening developer tools will be logged and reviewed by your administrator.
           </p>
           <div className="pt-4">
             <button

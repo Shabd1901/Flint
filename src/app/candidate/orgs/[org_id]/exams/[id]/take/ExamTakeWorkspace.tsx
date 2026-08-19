@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { ProctoringWrapper } from './ProctoringWrapper'
 import { ExamTimer } from './ExamTimer'
 import { QuestionForm } from './QuestionForm'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
 
 export function ExamTakeWorkspace({
   attempt,
@@ -26,6 +26,26 @@ export function ExamTakeWorkspace({
   heartbeatSession: (attemptId: string, token: string) => Promise<{ valid: boolean }>
 }) {
   const [warningCount, setWarningCount] = useState(0)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isPending, startTransition] = useTransition()
+
+  const handleFinishAndSubmit = async () => {
+    if (isSubmitting) return
+    setIsSubmitting(true)
+
+    // Exit fullscreen mode automatically upon completion
+    if (document.fullscreenElement) {
+      try {
+        await document.exitFullscreen()
+      } catch {
+        // ignore fullscreen exit errors
+      }
+    }
+
+    startTransition(async () => {
+      await submitExam()
+    })
+  }
 
   return (
     <div className="container-page py-6 md:py-8 max-w-4xl space-y-6 relative">
@@ -50,13 +70,15 @@ export function ExamTakeWorkspace({
             </div>
           )}
 
-          <ExamTimer startedAt={attempt.started_at} durationMinutes={durationMinutes} onExpire={submitExam} />
+          <ExamTimer startedAt={attempt.started_at} durationMinutes={durationMinutes} onExpire={handleFinishAndSubmit} />
           
-          <form action={submitExam}>
-            <button className="rounded-md bg-accent px-5 py-2 text-sm font-semibold text-white hover:bg-accent-strong transition">
-              Finish & Submit
-            </button>
-          </form>
+          <button
+            onClick={handleFinishAndSubmit}
+            disabled={isSubmitting || isPending}
+            className="inline-flex items-center gap-2 rounded-md bg-accent px-5 py-2 text-sm font-semibold text-white hover:bg-accent-strong transition disabled:opacity-50"
+          >
+            {(isSubmitting || isPending) ? <><RefreshCw size={14} className="animate-spin" /> Submitting...</> : 'Finish & Submit'}
+          </button>
         </div>
       </div>
 
