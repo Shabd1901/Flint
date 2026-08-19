@@ -30,9 +30,9 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
                 T&amp;P UID must follow the <code className="bg-white px-1.5 py-0.5 rounded border font-mono font-bold text-accent">YY-DEPT+ROLL-YY</code> format separated by hyphens.
               </p>
               <ul className="list-disc pl-4 space-y-1 text-[11px]">
-                <li>Example 1: <code className="font-mono bg-white px-1 rounded">24-ITB44-28</code></li>
-                <li>Example 2: <code className="font-mono bg-white px-1 rounded">24-AIDS12-28</code> (Supports longer department codes like AIDS)</li>
-                <li>Example 3: <code className="font-mono bg-white px-1 rounded">23-CMPN05-27</code></li>
+                <li>Example 1: <code className="font-mono bg-white px-1 rounded">24-ITB01-28</code></li>
+                <li>Example 2: <code className="font-mono bg-white px-1 rounded">24-AIDS44-28</code></li>
+                <li>Example 3: <code className="font-mono bg-white px-1 rounded">23-IT01-27</code></li>
               </ul>
             </div>
           </section>
@@ -59,7 +59,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
                     type="text"
                     required
                     className="w-full h-10 pl-9 pr-3 rounded-lg border bg-white text-xs outline-none ring-accent focus:ring-2 text-text"
-                    placeholder="e.g. Raunak Nayak"
+                    placeholder="e.g. Dev Shah"
                   />
                 </div>
               </label>
@@ -73,7 +73,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
                     type="email"
                     required
                     className="w-full h-10 pl-9 pr-3 rounded-lg border bg-white text-xs outline-none ring-accent focus:ring-2 text-text"
-                    placeholder="raunak@tcetmumbai.in"
+                    placeholder="1032240000@tcetmumbai.in"
                   />
                 </div>
               </label>
@@ -87,10 +87,9 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
                     type="text"
                     required
                     className="w-full h-10 pl-9 pr-3 rounded-lg border bg-white text-xs font-mono uppercase outline-none ring-accent focus:ring-2 text-text"
-                    placeholder="e.g. 24-ITB44-28 or 24-AIDS12-28"
+                    placeholder="e.g. 24-ITB01-28"
                   />
                 </div>
-                <span className="text-[10px] text-text-muted font-normal">Format: YY-DEPT+ROLL-YY (e.g. 24-ITB44-28 or 24-AIDS12-28)</span>
               </label>
 
               <label className="grid gap-1 text-xs font-semibold text-text-muted">

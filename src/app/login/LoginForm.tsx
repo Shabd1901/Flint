@@ -46,7 +46,7 @@ export function LoginForm({ error, success }: { error?: string; success?: string
         <p className="mt-1 text-xs text-text-muted">
           {roleMode === 'candidate'
             ? 'Access your enrolled classrooms, pending exams, and assignment tasks.'
-            : 'Access classroom administration, exam creation, and grading controls.'}
+            : 'Access classroom administration, exam/assignment/contests, and grading controls.'}
         </p>
       </div>
 
@@ -74,7 +74,7 @@ export function LoginForm({ error, success }: { error?: string; success?: string
               type="email"
               required
               className="w-full h-10 pl-9 pr-3 rounded-lg border bg-white text-xs outline-none ring-accent focus:ring-2 text-text"
-              placeholder={roleMode === 'candidate' ? 'candidate@university.edu' : 'admin@org.edu'}
+              placeholder={roleMode === 'candidate' ? '1032240000@tcetmumbai.in' : 'admin@tcetmumbai.in'}
             />
           </div>
         </label>
