@@ -12,11 +12,11 @@ export function AdminSidebar({ signOutAction }: { signOutAction: () => Promise<v
 
   if (orgId) {
     navItems = [
-      { label: '← All Organizations', href: '/admin/orgs', icon: ArrowLeft },
+      { label: 'All Organizations', href: '/admin/orgs', icon: ArrowLeft },
       { label: 'Classroom', href: `/admin/orgs/${orgId}`, icon: LayoutDashboard, exact: true },
       { label: 'Exams', href: `/admin/orgs/${orgId}/exams`, icon: FileText },
       { label: 'Assignments', href: `/admin/orgs/${orgId}/assignments`, icon: CheckSquare },
-      { label: 'Coding Contests', href: `/admin/orgs/${orgId}/contests`, icon: Code2 },
+      { label: 'Coding Contests', href: `/admin/orgs/${orgId}/contests`, icon: Code2, badge: 'TBD' },
     ]
   } else {
     navItems = [
@@ -25,8 +25,8 @@ export function AdminSidebar({ signOutAction }: { signOutAction: () => Promise<v
   }
 
   return (
-    <Sidebar 
-      title="Flint" 
+    <Sidebar
+      title="Flint"
       role="Admin"
       navItems={navItems}
       handleSignOut={signOutAction}

@@ -12,6 +12,7 @@ export interface NavItem {
   href: string
   icon: LucideIcon
   exact?: boolean
+  badge?: string
 }
 
 export function Sidebar({
@@ -104,7 +105,12 @@ export function Sidebar({
                 }`}
               >
                 <Icon size={18} className={`transition ${isActive ? 'text-accent' : 'text-text-muted group-hover:text-text'}`} />
-                {item.label}
+                <span className="truncate">{item.label}</span>
+                {item.badge && (
+                  <span className="ml-auto rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 border border-amber-200">
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             )
           })}

@@ -52,12 +52,17 @@ export default async function CandidateOrgDashboard({ params }: { params: Promis
         </Link>
 
         <Link href={`/candidate/orgs/${org_id}/contests`} className="surface-card hover-lift p-5 group flex flex-col justify-between h-32">
-          <div className="flex items-center gap-3 text-lg font-semibold">
-            <Terminal className="text-emerald-500" />
-            Coding Contests
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 text-lg font-semibold">
+              <Terminal className="text-emerald-500" />
+              Coding Contests
+            </div>
+            <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 border border-amber-200">
+              TBD
+            </span>
           </div>
           <div className="flex items-center justify-between text-sm text-text-muted">
-            Join coding events <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            Planned for Version 2 <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </Link>
       </div>

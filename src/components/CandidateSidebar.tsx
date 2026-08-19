@@ -12,11 +12,11 @@ export function CandidateSidebar({ signOutAction }: { signOutAction: () => Promi
 
   if (orgId) {
     navItems = [
-      { label: '← Back to Home', href: '/candidate', icon: ArrowLeft },
+      { label: 'Back to Home', href: '/candidate', icon: ArrowLeft },
       { label: 'Classroom', href: `/candidate/orgs/${orgId}`, icon: Building, exact: true },
       { label: 'My Exams', href: `/candidate/orgs/${orgId}/exams`, icon: BookOpen },
       { label: 'My Assignments', href: `/candidate/orgs/${orgId}/assignments`, icon: Code },
-      { label: 'Coding Contests', href: `/candidate/orgs/${orgId}/contests`, icon: Terminal },
+      { label: 'Coding Contests', href: `/candidate/orgs/${orgId}/contests`, icon: Terminal, badge: 'TBD' },
     ]
   } else {
     navItems = [
@@ -25,8 +25,8 @@ export function CandidateSidebar({ signOutAction }: { signOutAction: () => Promi
   }
 
   return (
-    <Sidebar 
-      title="Flint" 
+    <Sidebar
+      title="Flint"
       role="Candidate"
       navItems={navItems}
       handleSignOut={signOutAction}
