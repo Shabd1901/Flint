@@ -32,7 +32,14 @@ export async function logViolation(attemptId: string, type: string, meta?: any) 
       return sum + (VIOLATION_WEIGHTS[e.type] || 1)
     }, 0)
 
-    await supabase
+    const { createClient: createSB } = await import('@supabase/supabase-js')
+    const adminClient = createSB(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+
+    await adminClient
       .from('exam_attempts')
       .update({ violation_score: totalScore })
       .eq('id', attemptId)
@@ -56,10 +63,17 @@ export async function heartbeatSession(attemptId: string, sessionToken: string):
     return { valid: false }
   }
 
+  const { createClient: createSB } = await import('@supabase/supabase-js')
+  const adminClient = createSB(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+
   // If token is null/empty, register current token
   if (!attempt.active_session_token) {
     console.log('[DEBUG] Registering new token', sessionToken)
-    await supabase
+    await adminClient
       .from('exam_attempts')
       .update({ active_session_token: sessionToken, last_heartbeat: new Date().toISOString() })
       .eq('id', attemptId)
@@ -69,7 +83,7 @@ export async function heartbeatSession(attemptId: string, sessionToken: string):
   // If token matches, refresh heartbeat
   if (attempt.active_session_token === sessionToken) {
     console.log('[DEBUG] Token matches, refreshing')
-    await supabase
+    await adminClient
       .from('exam_attempts')
       .update({ last_heartbeat: new Date().toISOString() })
       .eq('id', attemptId)
@@ -91,7 +105,7 @@ export async function heartbeatSession(attemptId: string, sessionToken: string):
   if (now - lastHeartbeat > 15000) {
     console.log('[DEBUG] Old session is dead, taking over')
     // The previous tab/window was closed or lost connection. Safe to take over.
-    await supabase
+    await adminClient
       .from('exam_attempts')
       .update({ active_session_token: sessionToken, last_heartbeat: new Date().toISOString() })
       .eq('id', attemptId)

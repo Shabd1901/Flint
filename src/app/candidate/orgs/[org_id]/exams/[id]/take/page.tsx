@@ -50,8 +50,15 @@ export default async function ExamTake({ params }: { params: Promise<{ org_id: s
     const s = await createClient()
     const { data: { user } } = await s.auth.getUser()
 
+    const { createClient: createSB } = await import('@supabase/supabase-js')
+    const adminClient = createSB(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+
     // Atomic idempotency guard: transition status from in_progress -> submitted
-    const { data: updatedAttempt } = await s.from('exam_attempts')
+    const { data: updatedAttempt } = await adminClient.from('exam_attempts')
       .update({ 
         status: 'submitted', 
         submitted_at: new Date().toISOString()
@@ -109,7 +116,7 @@ export default async function ExamTake({ params }: { params: Promise<{ org_id: s
       }
     }
 
-    await s.from('exam_attempts')
+    await adminClient.from('exam_attempts')
       .update({ score: totalScore })
       .eq('id', updatedAttempt.id)
 
