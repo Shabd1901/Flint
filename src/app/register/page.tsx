@@ -1,83 +1,118 @@
 import Link from 'next/link'
 import { register } from './actions'
+import { User, Mail, IdCard, Lock } from 'lucide-react'
 
 export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const resolvedParams = await searchParams
   const error = resolvedParams?.error
 
   return (
-    <div className="min-h-screen bg-bg p-4 md:p-6">
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-6 flex items-center justify-between">
-          <Link href="/" className="font-semibold tracking-tight">Flint</Link>
-          <Link href="/login" className="rounded-md border bg-white px-3 py-2 text-sm font-medium hover:bg-surface-soft">Already registered? Sign in</Link>
+    <div className="min-h-screen bg-bg p-4 md:p-6 flex items-center justify-center">
+      <div className="w-full max-w-5xl space-y-6">
+        <header className="flex items-center justify-between">
+          <Link href="/" className="font-bold text-xl tracking-tight text-accent">Flint</Link>
+          <Link href="/login" className="rounded-md border bg-white px-4 py-2 text-xs font-semibold text-text hover:bg-surface-soft transition">
+            Already registered? Sign in
+          </Link>
         </header>
 
-        <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-          <section className="surface-card p-6 md:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">Candidate onboarding</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight">Create your candidate profile</h1>
-            <p className="mt-3 text-sm text-text-muted">
-              Register once and use the same account across exams, coding rounds, and assignments.
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] items-start">
+          <section className="surface-card p-6 md:p-8 space-y-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">Candidate Onboarding</p>
+            <h1 className="text-3xl font-bold tracking-tight text-text">Create Candidate Profile</h1>
+            <p className="text-sm text-text-muted leading-relaxed">
+              Register your TCET candidate account using your institution email and T&amp;P UID.
             </p>
 
-            <div className="mt-6 rounded-lg border bg-surface-soft p-4 text-sm text-text-muted">
-              <p className="font-medium text-text">What happens next?</p>
-              <ol className="mt-2 list-decimal space-y-1 pl-5">
-                <li>Account is created and email is confirmed.</li>
-                <li>Your role is set to candidate.</li>
-                <li>Sign in and join your class/event via invite code.</li>
-              </ol>
+            <div className="rounded-xl border bg-surface-soft p-4 text-xs text-text-muted space-y-2 border-line">
+              <p className="font-bold text-text text-sm">T&amp;P UID Format Rule:</p>
+              <p className="leading-relaxed">
+                T&amp;P UID must follow the <code className="bg-white px-1.5 py-0.5 rounded border font-mono font-bold text-accent">YY-DEPT+ROLL-YY</code> format separated by hyphens.
+              </p>
+              <ul className="list-disc pl-4 space-y-1 text-[11px]">
+                <li>Example 1: <code className="font-mono bg-white px-1 rounded">24-ITB44-28</code></li>
+                <li>Example 2: <code className="font-mono bg-white px-1 rounded">24-AIDS12-28</code> (Supports longer department codes like AIDS)</li>
+                <li>Example 3: <code className="font-mono bg-white px-1 rounded">23-CMPN05-27</code></li>
+              </ul>
             </div>
           </section>
 
-          <section className="surface-card p-6 md:p-8">
-            <h2 className="text-xl font-semibold tracking-tight">Registration form</h2>
-            <p className="mt-1 text-sm text-text-muted">Only candidates can self-register in Phase 1.</p>
+          <section className="surface-card p-6 md:p-8 space-y-5">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-text">Registration Form</h2>
+              <p className="mt-1 text-xs text-text-muted">Fill out your candidate details below.</p>
+            </div>
 
             {error && (
-              <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+              <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700 animate-in fade-in">
                 {error}
               </div>
             )}
 
-            <form className="mt-5 space-y-4">
-              <label className="grid gap-1 text-sm">
-                <span>Full name</span>
-                <input
-                  name="name"
-                  type="text"
-                  required
-                  className="h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2"
-                  placeholder="John Doe"
-                />
+            <form className="space-y-4">
+              <label className="grid gap-1 text-xs font-semibold text-text-muted">
+                <span>Full Name</span>
+                <div className="relative">
+                  <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <input
+                    name="name"
+                    type="text"
+                    required
+                    className="w-full h-10 pl-9 pr-3 rounded-lg border bg-white text-xs outline-none ring-accent focus:ring-2 text-text"
+                    placeholder="e.g. Raunak Nayak"
+                  />
+                </div>
               </label>
 
-              <label className="grid gap-1 text-sm">
-                <span>Email</span>
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  className="h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2"
-                  placeholder="you@example.com"
-                />
+              <label className="grid gap-1 text-xs font-semibold text-text-muted">
+                <span>TCET Email</span>
+                <div className="relative">
+                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    className="w-full h-10 pl-9 pr-3 rounded-lg border bg-white text-xs outline-none ring-accent focus:ring-2 text-text"
+                    placeholder="raunak@tcetmumbai.in"
+                  />
+                </div>
               </label>
 
-              <label className="grid gap-1 text-sm">
+              <label className="grid gap-1 text-xs font-semibold text-text-muted">
+                <span>T&amp;P UID</span>
+                <div className="relative">
+                  <IdCard size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <input
+                    name="tp_uid"
+                    type="text"
+                    required
+                    className="w-full h-10 pl-9 pr-3 rounded-lg border bg-white text-xs font-mono uppercase outline-none ring-accent focus:ring-2 text-text"
+                    placeholder="e.g. 24-ITB44-28 or 24-AIDS12-28"
+                  />
+                </div>
+                <span className="text-[10px] text-text-muted font-normal">Format: YY-DEPT+ROLL-YY (e.g. 24-ITB44-28 or 24-AIDS12-28)</span>
+              </label>
+
+              <label className="grid gap-1 text-xs font-semibold text-text-muted">
                 <span>Password</span>
-                <input
-                  name="password"
-                  type="password"
-                  required
-                  minLength={6}
-                  className="h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2"
-                  placeholder="••••••••"
-                />
+                <div className="relative">
+                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+                  <input
+                    name="password"
+                    type="password"
+                    required
+                    minLength={6}
+                    className="w-full h-10 pl-9 pr-3 rounded-lg border bg-white text-xs outline-none ring-accent focus:ring-2 text-text"
+                    placeholder="••••••••"
+                  />
+                </div>
               </label>
 
-              <button formAction={register} className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-accent-strong">
-                Create account
+              <button
+                formAction={register}
+                className="w-full rounded-lg bg-accent px-4 py-2.5 text-xs font-bold text-white transition hover:-translate-y-0.5 hover:bg-accent-strong shadow-md"
+              >
+                Create Candidate Account
               </button>
             </form>
           </section>

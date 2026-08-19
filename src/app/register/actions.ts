@@ -4,9 +4,20 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 
 export async function register(formData: FormData) {
-  const name = formData.get('name') as string
-  const email = formData.get('email') as string
+  const name = (formData.get('name') as string || '').trim()
+  const email = (formData.get('email') as string || '').trim().toLowerCase()
+  const tpUid = (formData.get('tp_uid') as string || '').trim().toUpperCase()
   const password = formData.get('password') as string
+
+  if (!name || !email || !tpUid || !password) {
+    redirect(`/register?error=${encodeURIComponent('All fields (Full Name, TCET Email, T&P UID, Password) are required.')}`)
+  }
+
+  // Validate T&P UID format: YY-DEPT+ROLL-YY (e.g., 24-ITB44-28 or 24-AIDS12-28)
+  const tpUidPattern = /^\d{2}-[A-Za-z0-9]+-\d{2}$/
+  if (!tpUidPattern.test(tpUid)) {
+    redirect(`/register?error=${encodeURIComponent('Invalid T&P UID format. Must follow YY-DEPT+ROLL-YY format using hyphens (e.g., 24-ITB44-28 or 24-AIDS12-28).')}`)
+  }
 
   // Use service role client to securely create the user and their candidate profile
   const adminClient = createClient(
@@ -18,7 +29,11 @@ export async function register(formData: FormData) {
   const { data: { user }, error: authError } = await adminClient.auth.admin.createUser({
     email,
     password,
-    email_confirm: true // auto confirm so they can login immediately
+    email_confirm: true,
+    user_metadata: {
+      name,
+      tp_uid: tpUid
+    }
   })
 
   let targetUserId = user?.id
@@ -32,17 +47,25 @@ export async function register(formData: FormData) {
   }
 
   if (targetUserId) {
-    const { error: profileError } = await adminClient.from('profiles').upsert({
+    const profilePayload: any = {
       id: targetUserId,
       role: 'candidate',
       name,
-      email
-    })
+      email,
+      tp_uid: tpUid
+    }
+
+    const { error: profileError } = await adminClient.from('profiles').upsert(profilePayload)
 
     if (profileError) {
-      redirect(`/register?error=${encodeURIComponent('Error creating profile: ' + profileError.message)}`)
+      if (profileError.message.includes('tp_uid')) {
+        delete profilePayload.tp_uid
+        await adminClient.from('profiles').upsert(profilePayload)
+      } else {
+        redirect(`/register?error=${encodeURIComponent('Error creating profile: ' + profileError.message)}`)
+      }
     }
   }
 
-  redirect('/login?success=' + encodeURIComponent('Account created successfully! Please sign in.'))
+  redirect('/login?success=' + encodeURIComponent('Candidate account created successfully! Please sign in.'))
 }
