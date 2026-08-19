@@ -186,7 +186,7 @@ export default async function CandidateDashboard({
             {enrollments.map((e: any) => (
               <Link
                 key={e.org_id}
-                href={`/candidate/orgs/${e.org_id}`}
+                href={`/candidate/orgs/${e.org_id}/exams`}
                 className="surface-card hover-lift p-5 group flex flex-col justify-between h-36 border border-line bg-white hover:border-accent/40 transition-all shadow-sm rounded-xl"
               >
                 <div>
@@ -202,7 +202,7 @@ export default async function CandidateDashboard({
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-text-muted font-medium pt-3 border-t border-line/60">
-                  <span>Enter Classroom</span>
+                  <span>View Exams & Tasks</span>
                   <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform text-accent" />
                 </div>
               </Link>
