@@ -9,13 +9,14 @@ export default async function ContestTake({ params }: { params: Promise<{ org_id
   const { org_id, id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   const { data: contest } = await supabase.from('contests').select('*').eq('id', id).single()
   const { data: attempt } = await supabase
     .from('contest_attempts')
     .select('*')
     .eq('contest_id', id)
-    .eq('candidate_id', user!.id)
+    .eq('candidate_id', user.id)
     .single()
 
   const { data: problems } = await supabase

@@ -21,11 +21,12 @@ export default async function ExamTake({ params }: { params: Promise<{ org_id: s
   const { org_id, id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   const { data: attempt } = await supabase.from('exam_attempts')
     .select('*, exams(duration_minutes)')
     .eq('exam_id', id)
-    .eq('candidate_id', user!.id)
+    .eq('candidate_id', user.id)
     .single()
 
   if (!attempt || attempt.status !== 'in_progress') {

@@ -9,16 +9,17 @@ export default async function CandidateAssignments({ params }: { params: Promise
   const { org_id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
   
   // Verify enrollment
-  const { data: enrollment } = await supabase.from('enrollments').select('id').eq('org_id', org_id).eq('candidate_id', user!.id).single()
+  const { data: enrollment } = await supabase.from('enrollments').select('id').eq('org_id', org_id).eq('candidate_id', user.id).single()
   if (!enrollment) redirect('/candidate')
 
   // Find assignments for this org
   const { data: assignments } = await supabase.from('assignments').select('*, orgs(name)').eq('org_id', org_id)
 
   // Find my submissions
-  const { data: submissions } = await supabase.from('assignment_submissions').select('*').eq('candidate_id', user!.id)
+  const { data: submissions } = await supabase.from('assignment_submissions').select('*').eq('candidate_id', user.id)
   const submissionMap = new Map(submissions?.map(s => [s.assignment_id, s]))
 
   return (

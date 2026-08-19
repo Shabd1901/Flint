@@ -7,16 +7,17 @@ export default async function CandidateExams({ params }: { params: Promise<{ org
   const { org_id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
   
   // Verify enrollment
-  const { data: enrollment } = await supabase.from('enrollments').select('id').eq('org_id', org_id).eq('candidate_id', user!.id).single()
+  const { data: enrollment } = await supabase.from('enrollments').select('id').eq('org_id', org_id).eq('candidate_id', user.id).single()
   if (!enrollment) redirect('/candidate')
 
   // Find LIVE exams for this org
   const { data: exams } = await supabase.from('exams').select('*, orgs(name)').eq('org_id', org_id).eq('status', 'live')
 
   // Find my attempts
-  const { data: attempts } = await supabase.from('exam_attempts').select('*').eq('candidate_id', user!.id)
+  const { data: attempts } = await supabase.from('exam_attempts').select('*').eq('candidate_id', user.id)
   const attemptMap = new Map(attempts?.map(a => [a.exam_id, a]))
 
   async function startExam(formData: FormData) {
