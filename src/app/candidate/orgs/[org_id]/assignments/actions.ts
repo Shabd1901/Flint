@@ -58,28 +58,45 @@ export async function submitAssignmentAction(orgId: string, formData: FormData) 
       }
     }
 
-    // Preserve existing file_url if resubmitting without attaching a new file
+    // Check for existing submission
     const { data: existingSub } = await adminClient
       .from('assignment_submissions')
-      .select('file_url')
+      .select('id, file_url')
       .eq('assignment_id', assignmentId)
       .eq('candidate_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (!fileUrl && existingSub?.file_url) {
       fileUrl = existingSub.file_url
     }
 
-    const { error: dbErr } = await adminClient.from('assignment_submissions').upsert({
-      assignment_id: assignmentId,
-      candidate_id: user.id,
-      link_url: linkUrl || null,
-      file_url: fileUrl || null,
-      text_answer: textAnswer || null
-    }, { onConflict: 'assignment_id,candidate_id' })
+    let dbErr = null
+
+    if (existingSub) {
+      const { error } = await adminClient
+        .from('assignment_submissions')
+        .update({
+          link_url: linkUrl || null,
+          file_url: fileUrl || null,
+          text_answer: textAnswer || null
+        })
+        .eq('id', existingSub.id)
+      dbErr = error
+    } else {
+      const { error } = await adminClient
+        .from('assignment_submissions')
+        .insert({
+          assignment_id: assignmentId,
+          candidate_id: user.id,
+          link_url: linkUrl || null,
+          file_url: fileUrl || null,
+          text_answer: textAnswer || null
+        })
+      dbErr = error
+    }
 
     if (dbErr) {
-      console.error('DB Upsert Error:', dbErr)
+      console.error('DB Error:', dbErr)
       return { error: 'Failed to save submission: ' + dbErr.message }
     }
 
