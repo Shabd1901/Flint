@@ -16,20 +16,27 @@ export function ProctoringWrapper({
   attemptId, 
   logAction, 
   heartbeatAction,
-  onWarningCountChange
+  onWarningCountChange,
+  isSubmitting = false
 }: { 
   attemptId: string
   logAction: (attemptId: string, type: string, meta?: any) => Promise<void>
   heartbeatAction: (attemptId: string, token: string) => Promise<{ valid: boolean }>
   onWarningCountChange?: (count: number) => void
+  isSubmitting?: boolean
 }) {
   const hasLoggedDevtools = useRef(false)
   const lastLogTime = useRef<Record<string, number>>({})
   const warningCountRef = useRef(0)
+  const isSubmittingRef = useRef(isSubmitting)
   const [sessionLocked, setSessionLocked] = useState(false)
   const [isProctoringStarted, setIsProctoringStarted] = useState(false)
   const [warningCount, setWarningCount] = useState(0)
   const [activeWarning, setActiveWarning] = useState<string | null>(null)
+
+  useEffect(() => {
+    isSubmittingRef.current = isSubmitting
+  }, [isSubmitting])
 
   const handleStartFullscreen = () => {
     document.documentElement.requestFullscreen()
@@ -46,6 +53,9 @@ export function ProctoringWrapper({
     }
 
     const rateLimitedLog = (type: string, meta?: any) => {
+      // Suppress any violation logging if assessment is submitting or finished
+      if (isSubmittingRef.current) return
+
       const now = Date.now()
       const lastTime = lastLogTime.current[type] || 0
       if (now - lastTime < 5000) return

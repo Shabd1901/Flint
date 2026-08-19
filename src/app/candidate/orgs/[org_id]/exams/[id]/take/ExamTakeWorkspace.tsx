@@ -54,6 +54,7 @@ export function ExamTakeWorkspace({
         logAction={logViolation}
         heartbeatAction={heartbeatSession}
         onWarningCountChange={(count) => setWarningCount(count)}
+        isSubmitting={isSubmitting || isPending}
       />
 
       <div className="flex flex-wrap justify-between items-center surface-card p-5 sticky top-4 z-10 shadow-lg gap-4">
