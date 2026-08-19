@@ -42,6 +42,12 @@ export async function submitFullSolution(
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  // Block if attempt is not in_progress
+  const { data: attempt } = await supabase.from('contest_attempts').select('status').eq('id', contestAttemptId).single()
+  if (attempt?.status !== 'in_progress') {
+    throw new Error('Attempt is no longer in progress')
+  }
+
   // Fetch all test cases (sample + hidden)
   const { data: testCases } = await supabase
     .from('test_cases')

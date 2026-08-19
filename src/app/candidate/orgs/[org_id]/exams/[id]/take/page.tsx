@@ -126,6 +126,12 @@ export default async function ExamTake({ params }: { params: Promise<{ org_id: s
     let numberAnswer: number | null = null
     let fileUrl: string | null = null
 
+    // Block if attempt is not in_progress
+    const { data: attemptCheck } = await s.from('exam_attempts').select('status').eq('id', attemptId).single()
+    if (attemptCheck?.status !== 'in_progress') {
+      throw new Error('Attempt is no longer in progress')
+    }
+
     if (qType === 'single' || qType === 'multi' || qType === 'true_false') {
       const selectedRaw = formData.getAll('options').map(String)
       const selectedStr = formData.get('option') as string
