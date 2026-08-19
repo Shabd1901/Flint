@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { Shield, GraduationCap, Lock, Mail } from 'lucide-react'
 import { SubmitButton } from './SubmitButton'
 import { login } from './actions'
@@ -96,15 +95,6 @@ export function LoginForm({ error, success }: { error?: string; success?: string
 
         <SubmitButton />
       </form>
-
-      {roleMode === 'candidate' && (
-        <div className="pt-2 border-t text-center text-xs text-text-muted">
-          Don&apos;t have a candidate account?{' '}
-          <Link href="/register" className="font-semibold text-accent hover:underline">
-            Register Candidate Account
-          </Link>
-        </div>
-      )}
     </div>
   )
 }
