@@ -18,7 +18,17 @@ export default async function AdminPeoplePage({ params }: { params: Promise<{ or
 
   // 1. Fetch Teachers / Admins
   const { data: ownerProfile } = await adminClient.from('profiles').select('id, name, email').eq('id', org.admin_id).single()
-  const { data: coAdminsData } = await adminClient.from('org_admins').select('admin_id, profiles(id, name, email)').eq('org_id', org.id)
+  const { data: coAdminsData } = await adminClient.from('org_admins').select('admin_id').eq('org_id', org.id)
+
+  const adminIdsSet = new Set<string>()
+  if (org.admin_id) adminIdsSet.add(org.admin_id)
+  coAdminsData?.forEach(ca => adminIdsSet.add(ca.admin_id))
+
+  const { data: adminProfiles } = adminIdsSet.size > 0
+    ? await adminClient.from('profiles').select('id, name, email').in('id', Array.from(adminIdsSet))
+    : { data: [] }
+
+  const adminProfileMap = new Map(adminProfiles?.map(p => [p.id, p]) || [])
 
   const teachers: TeacherMember[] = []
   if (ownerProfile) {
@@ -30,28 +40,26 @@ export default async function AdminPeoplePage({ params }: { params: Promise<{ or
     })
   }
 
-  if (coAdminsData) {
-    coAdminsData.forEach(ca => {
-      const p = (ca.profiles as any)
-      if (p && p.id !== org.admin_id) {
-        teachers.push({
-          id: p.id,
-          name: p.name || p.email || 'Co-Admin',
-          email: p.email,
-          role: 'Co-Admin'
-        })
-      }
-    })
-  }
+  coAdminsData?.forEach(ca => {
+    if (ca.admin_id !== org.admin_id) {
+      const p = adminProfileMap.get(ca.admin_id)
+      teachers.push({
+        id: ca.admin_id,
+        name: p?.name || p?.email || 'Co-Admin',
+        email: p?.email || '',
+        role: 'Co-Admin'
+      })
+    }
+  })
 
-  // 2. Fetch Enrolled Candidates
+  // 2. Fetch Candidates enrolled in this org
   const { data: enrollments } = await adminClient
     .from('enrollments')
-    .select('id, created_at, candidate_id, profiles(id, name, email)')
+    .select('id, created_at, candidate_id')
     .eq('org_id', org.id)
     .order('created_at', { ascending: false })
 
-  // 3. Fetch Exam Attempts to calculate candidate activity
+  // 3. Fetch Exam & Assignment activity for org
   const { data: orgExams } = await supabase.from('exams').select('id').eq('org_id', org.id)
   const examIds = orgExams?.map(e => e.id) || []
 
@@ -73,15 +81,40 @@ export default async function AdminPeoplePage({ params }: { params: Promise<{ or
     }
   }
 
-  const candidates: CandidateMember[] = (enrollments || []).map(e => {
-    const p = (e.profiles as any)
-    const stats = attemptsMap.get(e.candidate_id) || { examsTaken: 0, violations: 0 }
+  // Collect candidate IDs from enrollments & attempts
+  const candidateIdSet = new Set<string>()
+  const enrollmentDateMap = new Map<string, string>()
+
+  enrollments?.forEach(e => {
+    candidateIdSet.add(e.candidate_id)
+    enrollmentDateMap.set(e.candidate_id, e.created_at)
+  })
+
+  // Also include candidates who attempted exams for this org even if enrollment record was missing
+  attemptsMap.forEach((_, candId) => {
+    candidateIdSet.add(candId)
+    if (!enrollmentDateMap.has(candId)) {
+      enrollmentDateMap.set(candId, new Date().toISOString())
+    }
+  })
+
+  // Fetch profiles for all candidates
+  const candidateIds = Array.from(candidateIdSet)
+  const { data: candidateProfiles } = candidateIds.length > 0
+    ? await adminClient.from('profiles').select('id, name, email').in('id', candidateIds)
+    : { data: [] }
+
+  const candidateProfileMap = new Map(candidateProfiles?.map(p => [p.id, p]) || [])
+
+  const candidates: CandidateMember[] = candidateIds.map(candId => {
+    const p = candidateProfileMap.get(candId)
+    const stats = attemptsMap.get(candId) || { examsTaken: 0, violations: 0 }
 
     return {
-      id: e.candidate_id,
+      id: candId,
       name: p?.name || p?.email || 'Candidate',
       email: p?.email || '',
-      enrolledAt: e.created_at,
+      enrolledAt: enrollmentDateMap.get(candId) || new Date().toISOString(),
       examsTaken: stats.examsTaken,
       violationCount: stats.violations
     }

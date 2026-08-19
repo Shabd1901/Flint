@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Search, UserX, Copy, Check, Shield, GraduationCap, RefreshCw, X, AlertTriangle } from 'lucide-react'
+import { Search, UserX, Copy, Check, Shield, GraduationCap, RefreshCw, X, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatDate } from '@/utils/formatDate'
 import { removeCandidateAction } from './actions'
 
@@ -33,16 +33,28 @@ export function CandidateList({
   candidates: CandidateMember[]
 }) {
   const [search, setSearch] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [copied, setCopied] = useState(false)
   const [removingId, setRemovingId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  const pageSize = 10
 
   const filteredCandidates = candidates.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       c.email.toLowerCase().includes(search.toLowerCase())
   )
+
+  const totalPages = Math.ceil(filteredCandidates.length / pageSize) || 1
+  const startIndex = (currentPage - 1) * pageSize
+  const paginatedCandidates = filteredCandidates.slice(startIndex, startIndex + pageSize)
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value)
+    setCurrentPage(1)
+  }
 
   const handleCopyInvite = () => {
     navigator.clipboard.writeText(inviteCode)
@@ -161,7 +173,7 @@ export function CandidateList({
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={handleSearchChange}
               placeholder="Search candidate name or email..."
               className="w-full h-9 pl-9 pr-3 rounded-lg border bg-white text-xs outline-none focus:ring-2 focus:ring-accent"
             />
@@ -184,48 +196,97 @@ export function CandidateList({
             )}
           </div>
         ) : (
-          <div className="divide-y divide-line border rounded-xl bg-white overflow-hidden shadow-sm">
-            {filteredCandidates.map((c) => (
-              <div key={c.id} className="p-4 flex items-center justify-between hover:bg-surface-soft/40 transition">
-                <div className="flex items-center gap-3.5 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-700 font-bold text-sm flex items-center justify-center border border-emerald-200 shrink-0">
-                    {c.name ? c.name.charAt(0).toUpperCase() : 'S'}
+          <div className="space-y-4">
+            <div className="divide-y divide-line border rounded-xl bg-white overflow-hidden shadow-sm">
+              {paginatedCandidates.map((c) => (
+                <div key={c.id} className="p-4 flex items-center justify-between hover:bg-surface-soft/40 transition">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-700 font-bold text-sm flex items-center justify-center border border-emerald-200 shrink-0">
+                      {c.name ? c.name.charAt(0).toUpperCase() : 'S'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-text text-sm truncate">{c.name}</div>
+                      <div className="text-xs text-text-muted truncate mt-0.5">{c.email}</div>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="font-semibold text-text text-sm truncate">{c.name}</div>
-                    <div className="text-xs text-text-muted truncate mt-0.5">{c.email}</div>
+
+                  <div className="flex items-center gap-4 shrink-0">
+                    <div className="text-right hidden sm:block">
+                      <div className="text-xs font-medium text-text">
+                        {c.examsTaken} {c.examsTaken === 1 ? 'Exam Taken' : 'Exams Taken'}
+                      </div>
+                      <div className="text-[11px] text-text-muted mt-0.5">Enrolled {formatDate(c.enrolledAt)}</div>
+                    </div>
+
+                    {c.violationCount > 0 && (
+                      <span
+                        className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold border border-rose-200"
+                        title={`${c.violationCount} total proctoring flags`}
+                      >
+                        <AlertTriangle size={12} />
+                        {c.violationCount} Flag{c.violationCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
+
+                    <button
+                      onClick={() => handleRemove(c.id, c.name)}
+                      disabled={isPending && removingId === c.id}
+                      className="p-2 rounded-lg text-text-muted hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition disabled:opacity-50"
+                      title="Remove from classroom"
+                    >
+                      {isPending && removingId === c.id ? <RefreshCw size={16} className="animate-spin" /> : <UserX size={16} />}
+                    </button>
                   </div>
                 </div>
+              ))}
+            </div>
 
-                <div className="flex items-center gap-4 shrink-0">
-                  <div className="text-right hidden sm:block">
-                    <div className="text-xs font-medium text-text">
-                      {c.examsTaken} {c.examsTaken === 1 ? 'Exam Taken' : 'Exams Taken'}
-                    </div>
-                    <div className="text-[11px] text-text-muted mt-0.5">Enrolled {formatDate(c.enrolledAt)}</div>
-                  </div>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs text-text-muted">
+                <div>
+                  Showing <span className="font-semibold text-text">{startIndex + 1}</span> to{' '}
+                  <span className="font-semibold text-text">
+                    {Math.min(startIndex + pageSize, filteredCandidates.length)}
+                  </span>{' '}
+                  of <span className="font-semibold text-text">{filteredCandidates.length}</span> candidates
+                </div>
 
-                  {c.violationCount > 0 && (
-                    <span
-                      className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[10px] font-bold border border-rose-200"
-                      title={`${c.violationCount} total proctoring flags`}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border bg-white font-medium hover:bg-surface-soft disabled:opacity-40 transition"
+                  >
+                    <ChevronLeft size={14} />
+                    Previous
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`h-8 w-8 rounded-md font-semibold text-xs transition ${
+                        currentPage === page
+                          ? 'bg-accent text-white shadow-sm'
+                          : 'border bg-white text-text-muted hover:bg-surface-soft hover:text-text'
+                      }`}
                     >
-                      <AlertTriangle size={12} />
-                      {c.violationCount} Flag{c.violationCount !== 1 ? 's' : ''}
-                    </span>
-                  )}
+                      {page}
+                    </button>
+                  ))}
 
                   <button
-                    onClick={() => handleRemove(c.id, c.name)}
-                    disabled={isPending && removingId === c.id}
-                    className="p-2 rounded-lg text-text-muted hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition disabled:opacity-50"
-                    title="Remove from classroom"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md border bg-white font-medium hover:bg-surface-soft disabled:opacity-40 transition"
                   >
-                    {isPending && removingId === c.id ? <RefreshCw size={16} className="animate-spin" /> : <UserX size={16} />}
+                    Next
+                    <ChevronRight size={14} />
                   </button>
                 </div>
               </div>
-            ))}
+            )}
           </div>
         )}
       </section>
