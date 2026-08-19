@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { Download, CheckCircle2, XCircle, Eye, EyeOff, ArrowLeft, ShieldAlert } from 'lucide-react'
 import { formatDateTime } from '@/utils/formatDate'
 import { QuestionManager } from './QuestionManager'
@@ -35,10 +36,11 @@ function parseArray(val: any): string[] {
 export default async function ExamDetails({ params }: { params: Promise<{ org_id: string, id: string }> }) {
   const { org_id, id } = await params
   const supabase = await createClient()
+  const adminClient = createAdminClient()
   
   const { data: exam } = await supabase.from('exams').select('*').eq('id', id).single()
   const { data: questions } = await supabase.from('questions').select('*').eq('exam_id', id).order('created_at', { ascending: true })
-  const { data: attempts } = await supabase.from('exam_attempts').select('*, profiles(name, email), violation_events(*)').eq('exam_id', id).order('started_at', { ascending: false })
+  const { data: attempts } = await adminClient.from('exam_attempts').select('*, profiles(name, email), violation_events(*)').eq('exam_id', id).order('started_at', { ascending: false })
 
   const attemptIds = attempts?.map(a => a.id) || []
   const { data: allAnswers } = attemptIds.length > 0

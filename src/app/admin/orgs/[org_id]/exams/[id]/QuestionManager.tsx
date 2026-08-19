@@ -98,6 +98,21 @@ function QuestionFormFields({ defaultValues }: { defaultValues?: Question }) {
         </>
       )}
 
+      {type === 'true_false' && (
+        <div>
+          <input type="hidden" name="options" value="True, False" />
+          <label className="block text-sm font-medium text-text-muted mb-1">Correct Answer</label>
+          <select
+            name="correct_options"
+            defaultValue={parseArray(defaultValues?.correct_options)[0] || 'True'}
+            className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm font-medium"
+          >
+            <option value="True">True</option>
+            <option value="False">False</option>
+          </select>
+        </div>
+      )}
+
       {(type === 'short_answer' || type === 'fill_blank') && (
         <div>
           <label className="block text-sm font-medium text-text-muted mb-1">Exact Expected Answer (for auto-grading)</label>
@@ -323,11 +338,12 @@ export function QuestionManager({ questions, examId, orgId }: { questions: Quest
                 <div className="space-y-3 flex-1">
                   <p className="font-medium">{q.text}</p>
                   
-                  {(q.type === 'single' || q.type === 'multi') && (
+                  {(q.type === 'single' || q.type === 'multi' || q.type === 'true_false') && (
                     <ul className="space-y-1">
-                      {opts.map((opt, idx) => (
-                        <li key={idx} className={`px-3 py-2 rounded-lg text-sm ${correct.includes(opt) ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium' : 'bg-surface-soft text-text-muted'}`}>
-                          {opt}
+                      {(q.type === 'true_false' ? ['True', 'False'] : opts).map((opt, idx) => (
+                        <li key={idx} className={`px-3 py-2 rounded-lg text-sm ${correct.includes(opt) ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium flex items-center justify-between' : 'bg-surface-soft text-text-muted'}`}>
+                          <span>{opt}</span>
+                          {correct.includes(opt) && <span className="text-xs font-bold uppercase text-emerald-700">Correct Answer</span>}
                         </li>
                       ))}
                     </ul>

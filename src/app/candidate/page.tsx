@@ -3,7 +3,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Building } from 'lucide-react'
 
 export default async function CandidateDashboard({
   searchParams,
@@ -123,24 +123,24 @@ export default async function CandidateDashboard({
   }
 
   return (
-    <div className="container-page py-6 md:py-8">
+    <div className="container-page py-6 md:py-8 space-y-6">
       {resolvedParams.error && (
-        <div className="mb-4 rounded-md bg-red-50 p-4 text-sm font-medium text-red-800 border border-red-200">
+        <div className="rounded-md bg-red-50 p-4 text-sm font-medium text-red-800 border border-red-200">
           {resolvedParams.error}
         </div>
       )}
       {resolvedParams.success && (
-        <div className="mb-4 rounded-md bg-emerald-50 p-4 text-sm font-medium text-emerald-800 border border-emerald-200">
+        <div className="rounded-md bg-emerald-50 p-4 text-sm font-medium text-emerald-800 border border-emerald-200">
           {resolvedParams.success}
         </div>
       )}
       {resolvedParams.info && (
-        <div className="mb-4 rounded-md bg-blue-50 p-4 text-sm font-medium text-blue-800 border border-blue-200">
+        <div className="rounded-md bg-blue-50 p-4 text-sm font-medium text-blue-800 border border-blue-200">
           {resolvedParams.info}
         </div>
       )}
 
-      <header className="mb-6 surface-card p-5">
+      <header className="surface-card p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">Candidate dashboard</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">Welcome, {profile?.name || 'Candidate'}</h1>
         <p className="mt-1 text-sm text-text-muted">Track exams, assignments, and your submission activity.</p>
@@ -161,7 +161,7 @@ export default async function CandidateDashboard({
         </article>
       </section>
 
-      <section className="mt-4 surface-card p-5">
+      <section className="surface-card p-5">
         <h2 className="text-lg font-semibold">Join an Organization</h2>
         <p className="text-sm text-text-muted mt-1">Enter the invite code shared by your admin to enroll in their class or event.</p>
         <form action={joinOrg} className="mt-4 flex gap-3 items-end">
@@ -174,13 +174,37 @@ export default async function CandidateDashboard({
       </section>
 
       {enrollments && enrollments.length > 0 && (
-        <section className="mt-4 surface-card p-5">
-          <h2 className="text-lg font-semibold">My Organizations</h2>
-          <div className="mt-3 space-y-2">
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold tracking-tight text-text">My Classrooms</h2>
+            <span className="text-xs text-text-muted font-medium bg-surface-soft px-2.5 py-0.5 rounded-full border">
+              {enrollments.length} {enrollments.length === 1 ? 'Classroom' : 'Classrooms'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {enrollments.map((e: any) => (
-              <Link key={e.org_id} href={`/candidate/orgs/${e.org_id}`} className="flex items-center justify-between rounded-lg border bg-surface-soft hover:bg-surface-soft/70 transition p-4">
-                <span className="font-medium text-accent group-hover:text-accent-strong">{e.orgs?.name}</span>
-                <span className="flex items-center text-xs text-text-muted">Enter Classroom <ChevronRight size={14} className="ml-1" /></span>
+              <Link
+                key={e.org_id}
+                href={`/candidate/orgs/${e.org_id}`}
+                className="surface-card hover-lift p-5 group flex flex-col justify-between h-36 border border-line bg-white hover:border-accent/40 transition-all shadow-sm rounded-xl"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
+                      Classroom
+                    </span>
+                    <Building size={16} className="text-text-muted group-hover:text-accent transition-colors" />
+                  </div>
+                  <h3 className="mt-3 text-lg font-bold text-text group-hover:text-accent transition-colors line-clamp-1">
+                    {e.orgs?.name}
+                  </h3>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-text-muted font-medium pt-3 border-t border-line/60">
+                  <span>Enter Classroom</span>
+                  <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform text-accent" />
+                </div>
               </Link>
             ))}
           </div>

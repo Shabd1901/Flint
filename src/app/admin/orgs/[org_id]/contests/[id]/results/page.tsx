@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { Download, Trophy, Clock, Code2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { TbdNotice } from '@/components/TbdNotice'
@@ -6,11 +7,12 @@ import { TbdNotice } from '@/components/TbdNotice'
 export default async function ContestResults({ params }: { params: Promise<{ org_id: string, id: string }> }) {
   const { org_id, id } = await params
   const supabase = await createClient()
+  const adminClient = createAdminClient()
 
   const { data: contest } = await supabase.from('contests').select('*').eq('id', id).single()
 
   // Fetch all attempts with candidate profiles
-  const { data: attempts } = await supabase
+  const { data: attempts } = await adminClient
     .from('contest_attempts')
     .select('*, profiles(name, email)')
     .eq('contest_id', id)

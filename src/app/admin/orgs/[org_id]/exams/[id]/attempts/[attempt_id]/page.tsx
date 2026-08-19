@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, CheckCircle2, XCircle, Trophy, ShieldAlert, Clock, FileText } from 'lucide-react'
@@ -26,6 +27,7 @@ export default async function CandidateAttemptReviewPage({
 }) {
   const { org_id, id, attempt_id } = await params
   const supabase = await createClient()
+  const adminClient = createAdminClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -33,7 +35,7 @@ export default async function CandidateAttemptReviewPage({
   const { data: exam } = await supabase.from('exams').select('*').eq('id', id).single()
   if (!exam) notFound()
 
-  const { data: attempt } = await supabase
+  const { data: attempt } = await adminClient
     .from('exam_attempts')
     .select('*, profiles(name, email)')
     .eq('id', attempt_id)

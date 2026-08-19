@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { formatDateTime } from '@/utils/formatDate'
 import Link from 'next/link'
@@ -7,9 +8,10 @@ import { ArrowLeft } from 'lucide-react'
 export default async function AssignmentDetails({ params }: { params: Promise<{ org_id: string, id: string }> }) {
   const { org_id, id } = await params
   const supabase = await createClient()
+  const adminClient = createAdminClient()
   
   const { data: assignment } = await supabase.from('assignments').select('*').eq('id', id).single()
-  const { data: submissions } = await supabase.from('assignment_submissions').select('*, profiles(name, email)').eq('assignment_id', id)
+  const { data: submissions } = await adminClient.from('assignment_submissions').select('*, profiles(name, email)').eq('assignment_id', id)
 
   async function gradeSubmission(formData: FormData) {
     'use server'
