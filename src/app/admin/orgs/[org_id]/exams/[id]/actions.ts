@@ -98,6 +98,7 @@ export async function gradeExamAnswer(formData: FormData) {
   await s.from('exam_attempts').update({ score: newTotal }).eq('id', attemptId)
 
   revalidatePath(`/admin/orgs/${orgId}/exams/${examId}`)
+  revalidatePath(`/admin/orgs/${orgId}/exams/${examId}/attempts/${attemptId}`)
 }
 
 export async function updateExamSettings(examId: string, orgId: string, formData: FormData) {

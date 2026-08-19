@@ -1,5 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
-import { Download, CheckCircle2, XCircle, Eye, EyeOff, ArrowLeft } from 'lucide-react'
+import { Download, CheckCircle2, XCircle, Eye, EyeOff, ArrowLeft, ShieldAlert } from 'lucide-react'
 import { formatDateTime } from '@/utils/formatDate'
 import { QuestionManager } from './QuestionManager'
 import { ExamSettingsEditor } from './ExamSettingsEditor'
@@ -8,6 +8,15 @@ import { DeleteExamButton } from './DeleteExamButton'
 import { AutoReleaseToggle } from './AutoReleaseToggle'
 import { StatusUpdateForm } from './StatusUpdateForm'
 import Link from 'next/link'
+
+const VIOLATION_MAP: Record<string, { label: string; description: string; color: string }> = {
+  tab_switch: { label: 'Tab Switch', description: 'Switched tabs or minimized browser window', color: 'bg-amber-100 text-amber-800 border-amber-200' },
+  blur: { label: 'Lost Focus', description: 'Window lost focus / switched to external desktop application', color: 'bg-amber-100 text-amber-800 border-amber-200' },
+  fullscreen_exit: { label: 'Fullscreen Exit', description: 'Exited enforced full-screen container', color: 'bg-rose-100 text-rose-800 border-rose-200' },
+  devtools: { label: 'DevTools Opened', description: 'Opened browser developer tools inspection panel', color: 'bg-rose-100 text-rose-800 border-rose-200' },
+  multi_session: { label: 'Concurrent Session', description: 'Opened attempt on multiple windows/devices', color: 'bg-purple-100 text-purple-800 border-purple-200' },
+  copy_paste_blocked: { label: 'Copy/Paste Attempt', description: 'Attempted forbidden copy/paste action', color: 'bg-amber-100 text-amber-800 border-amber-200' },
+}
 
 function parseArray(val: any): string[] {
   if (!val) return []
@@ -108,7 +117,7 @@ export default async function ExamDetails({ params }: { params: Promise<{ org_id
 
       {/* Candidate Attempts & Response Review */}
       <div className="pt-6 border-t space-y-4">
-        <h2 className="text-xl font-semibold">Candidate Attempts & Response Review</h2>
+        <h2 className="text-xl font-semibold">Candidate Attempts & Proctoring Audit</h2>
         <div className="surface-card overflow-hidden">
           <table className="w-full text-left text-sm">
             <thead>
@@ -116,19 +125,17 @@ export default async function ExamDetails({ params }: { params: Promise<{ org_id
                 <th className="px-5 py-3 font-medium text-text-muted">Candidate</th>
                 <th className="px-5 py-3 font-medium text-text-muted">Status & Score</th>
                 <th className="px-5 py-3 font-medium text-text-muted">Time</th>
-                <th className="px-5 py-3 font-medium text-text-muted">Integrity Violations</th>
+                <th className="px-5 py-3 font-medium text-text-muted">Proctoring Violations & Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {attempts?.map((attempt: any) => {
-                const candidateAnsMap = answersByAttempt.get(attempt.id) || new Map()
-
                 return (
                   <tr key={attempt.id} className="hover:bg-surface-soft/40 transition-colors">
                     <td colSpan={4} className="p-0">
                       <details className="group">
                         <summary className="px-5 py-4 cursor-pointer flex items-center justify-between hover:bg-surface-soft/60 transition-colors list-none">
-                          <div className="grid grid-cols-4 w-full items-center gap-4 text-sm">
+                          <div className="grid grid-cols-1 md:grid-cols-4 w-full items-center gap-4 text-sm">
                             <div className="font-medium">
                               {attempt.profiles?.name}
                               <div className="text-xs text-text-muted mt-0.5">{attempt.profiles?.email}</div>
@@ -150,127 +157,74 @@ export default async function ExamDetails({ params }: { params: Promise<{ org_id
                               {attempt.submitted_at && <div>Finished: {formatDateTime(attempt.submitted_at)}</div>}
                             </div>
 
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between gap-3">
                               {attempt.violation_events?.length > 0 ? (
-                                <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded-md text-xs font-semibold uppercase">
+                                <span className="px-2.5 py-1 bg-rose-100 text-rose-800 rounded-md text-xs font-bold uppercase tracking-wider border border-rose-200">
                                   {attempt.violation_events.length} Violation{attempt.violation_events.length !== 1 ? 's' : ''}
                                 </span>
                               ) : (
-                                <span className="text-text-muted text-xs">Clean Session</span>
+                                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-md text-xs font-bold uppercase tracking-wider border border-emerald-200">
+                                  Clean Session
+                                </span>
                               )}
-                              <span className="text-xs text-accent font-medium group-open:rotate-180 transition-transform">▼ Inspect</span>
+
+                              <div className="flex items-center gap-2">
+                                <Link
+                                  href={`/admin/orgs/${org_id}/exams/${id}/attempts/${attempt.id}`}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent text-white font-semibold text-xs hover:bg-accent-strong transition shadow-sm"
+                                >
+                                  <Eye size={14} />
+                                  Show Score
+                                </Link>
+                                <span className="text-xs font-semibold text-text-muted group-open:rotate-180 transition-transform">▼</span>
+                              </div>
                             </div>
                           </div>
                         </summary>
 
-                        {/* Detailed Candidate Response Inspector */}
-                        <div className="px-6 py-4 bg-slate-50 border-t border-b space-y-4">
-                          <h4 className="text-xs font-semibold uppercase tracking-wider text-text-muted">Question-by-Question Response Review</h4>
-                          
-                          <div className="space-y-3">
-                            {questions?.map((q: any, qIdx: number) => {
-                              const userAns = candidateAnsMap.get(q.id)
-                              
-                              let isCorrect = false
-                              let candDisplay = 'No Answer'
-                              let correctDisplay = 'N/A'
-                              
-                              if (q.type === 'single' || q.type === 'multi') {
-                                const selected = parseArray(userAns?.selected_options)
-                                const correct = parseArray(q.correct_options)
-                                isCorrect = correct.length > 0 && correct.length === selected.length && correct.every((c: string) => selected.includes(c))
-                                candDisplay = selected.length > 0 ? selected.join(', ') : 'No Answer Selected'
-                                correctDisplay = correct.join(', ')
-                              } else if (q.type === 'true_false') {
-                                const selected = parseArray(userAns?.selected_options)[0]
-                                const correct = parseArray(q.correct_options)[0]
-                                isCorrect = !!correct && !!selected && correct === selected
-                                candDisplay = selected || 'No Answer'
-                                correctDisplay = correct || 'N/A'
-                              } else if (q.type === 'short_answer' || q.type === 'fill_blank') {
-                                isCorrect = !!(q.correct_text && userAns?.text_answer && (q.correct_text.trim().toLowerCase() === userAns.text_answer.trim().toLowerCase()))
-                                candDisplay = userAns?.text_answer || 'No Answer'
-                                correctDisplay = q.correct_text || 'N/A'
-                              } else if (q.type === 'numerical') {
-                                if (q.correct_number !== null && userAns?.number_answer !== null && userAns?.number_answer !== undefined) {
-                                  const diff = Math.abs(q.correct_number - userAns.number_answer)
-                                  isCorrect = diff <= (q.tolerance || 0)
-                                }
-                                candDisplay = userAns?.number_answer?.toString() || 'No Answer'
-                                correctDisplay = `${q.correct_number ?? 'N/A'} ± ${q.tolerance ?? 0}`
-                              } else if (q.type === 'long_answer') {
-                                isCorrect = false // manual grading
-                                candDisplay = userAns?.text_answer || 'No Answer'
-                                correctDisplay = userAns?.marks_awarded !== undefined && userAns?.marks_awarded !== null ? `Graded: ${userAns.marks_awarded} pts` : 'Manual Grade Required'
-                              } else if (q.type === 'file_upload') {
-                                isCorrect = false // manual grading
-                                candDisplay = userAns?.file_url ? 'File Uploaded' : 'No File'
-                                correctDisplay = userAns?.marks_awarded !== undefined && userAns?.marks_awarded !== null ? `Graded: ${userAns.marks_awarded} pts` : 'Manual Grade Required'
-                              }
+                        {/* Detailed Candidate Violations Dropdown */}
+                        <div className="px-6 py-5 bg-slate-50 border-t border-b space-y-4">
+                          <div className="flex items-center justify-between border-b pb-2">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-rose-700 flex items-center gap-2">
+                              <ShieldAlert size={16} />
+                              Recorded Integrity Violations ({attempt.violation_events?.length || 0})
+                            </h4>
+                            <span className="text-xs text-text-muted">Click row to toggle dropdown view</span>
+                          </div>
 
-                              return (
-                                <div key={q.id} className="p-3 bg-white rounded-lg border text-xs space-y-2">
-                                  <div className="flex justify-between items-start font-medium">
-                                    <span>{qIdx + 1}. {q.text} <span className="text-[10px] uppercase bg-surface-soft px-1.5 py-0.5 rounded ml-2">{q.type.replace('_', ' ')}</span></span>
-                                    {isCorrect ? (
-                                      <span className="flex items-center gap-1 text-emerald-600 font-semibold shrink-0">
-                                        <CheckCircle2 size={14} /> +{q.marks} pts
-                                      </span>
-                                    ) : (q.type === 'long_answer' || q.type === 'file_upload') ? (
-                                      userAns?.id ? (
-                                        <form action={gradeExamAnswer} className="flex items-center gap-2">
-                                          <input type="hidden" name="answer_id" value={userAns.id} />
-                                          <input type="hidden" name="attempt_id" value={attempt.id} />
-                                          <input type="hidden" name="exam_id" value={id} />
-                                          <input type="hidden" name="org_id" value={org_id} />
-                                          <div className="flex items-center gap-1">
-                                            <input 
-                                              type="number" 
-                                              name="marks" 
-                                              defaultValue={userAns.marks_awarded ?? ''}
-                                              max={q.marks} 
-                                              min={0} 
-                                              step="0.5" 
-                                              required
-                                              className="w-16 px-2 py-1 text-xs rounded border outline-none focus:border-accent bg-white"
-                                              placeholder={`/${q.marks}`}
-                                            />
-                                            <span className="text-text-muted text-xs font-semibold">/ {q.marks}</span>
-                                          </div>
-                                          <button type="submit" className="px-3 py-1 bg-accent text-white rounded text-xs font-semibold hover:bg-accent-strong transition">Save</button>
-                                        </form>
-                                      ) : (
-                                        <span className="flex items-center gap-1 text-rose-600 font-semibold shrink-0">
-                                          <XCircle size={14} /> 0 pts (No Answer)
+                          {(!attempt.violation_events || attempt.violation_events.length === 0) ? (
+                            <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 font-medium">
+                              <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                              Clean Session — No integrity flags or proctoring violations were recorded for this candidate during this assessment.
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {attempt.violation_events.map((ve: any, vIdx: number) => {
+                                const map = VIOLATION_MAP[ve.type] || { label: ve.type, description: 'Proctoring flag logged', color: 'bg-surface-soft text-text-muted border-line' }
+                                return (
+                                  <div key={ve.id || vIdx} className="p-3 bg-white rounded-lg border shadow-sm flex items-start justify-between gap-4 text-xs">
+                                    <div className="space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-mono font-bold text-text-muted">#{vIdx + 1}</span>
+                                        <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase border ${map.color}`}>
+                                          {map.label}
                                         </span>
-                                      )
-                                    ) : (
-                                      <span className="flex items-center gap-1 text-rose-600 font-semibold shrink-0">
-                                        <XCircle size={14} /> 0 pts
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
-                                    <div className="p-2 rounded bg-surface-soft">
-                                      <span className="text-text-muted block font-sans text-[10px] uppercase">Candidate Answer:</span>
-                                      {q.type === 'file_upload' && userAns?.file_url ? (
-                                        <a href={userAns.file_url} target="_blank" className="text-accent hover:underline font-semibold flex items-center gap-1 mt-1">Download File</a>
-                                      ) : (
-                                        <span className={candDisplay !== 'No Answer' && candDisplay !== 'No Answer Selected' ? ((isCorrect || q.type === 'long_answer') ? 'text-emerald-700 font-semibold whitespace-pre-wrap' : 'text-rose-700 font-semibold whitespace-pre-wrap') : 'text-text-muted italic'}>
-                                          {candDisplay}
-                                        </span>
+                                      </div>
+                                      <p className="text-text font-medium">{map.description}</p>
+                                      {ve.meta && (
+                                        <code className="block font-mono text-[10px] text-text-muted bg-surface-soft p-1.5 rounded border">
+                                          {JSON.stringify(ve.meta)}
+                                        </code>
                                       )}
                                     </div>
-                                    <div className="p-2 rounded bg-emerald-50 border border-emerald-200">
-                                      <span className="text-emerald-800 block font-sans text-[10px] uppercase">Correct Answer / Criteria:</span>
-                                      <span className="text-emerald-900 font-semibold">{correctDisplay}</span>
-                                    </div>
+                                    <span className="text-[11px] text-text-muted font-medium shrink-0" suppressHydrationWarning>
+                                      {formatDateTime(ve.occurred_at)}
+                                    </span>
                                   </div>
-                                </div>
-                              )
-                            })}
-                          </div>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
                       </details>
                     </td>
