@@ -1,5 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
+import { createClient as createSB } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
 import { ExamTakeWorkspace } from './ExamTakeWorkspace'
 import { logViolation, heartbeatSession } from './actions'
 
@@ -50,7 +52,6 @@ export default async function ExamTake({ params }: { params: Promise<{ org_id: s
     const s = await createClient()
     const { data: { user } } = await s.auth.getUser()
 
-    const { createClient: createSB } = await import('@supabase/supabase-js')
     const adminClient = createSB(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -70,7 +71,6 @@ export default async function ExamTake({ params }: { params: Promise<{ org_id: s
       .single()
 
     if (!updatedAttempt) {
-      const { revalidatePath } = await import('next/cache')
       revalidatePath(`/candidate/orgs/${org_id}/exams`)
       redirect(`/candidate/orgs/${org_id}/exams`)
       return
@@ -120,7 +120,6 @@ export default async function ExamTake({ params }: { params: Promise<{ org_id: s
       .update({ score: totalScore })
       .eq('id', updatedAttempt.id)
 
-    const { revalidatePath } = await import('next/cache')
     revalidatePath(`/candidate/orgs/${org_id}/exams`)
     redirect(`/candidate/orgs/${org_id}/exams`)
   }

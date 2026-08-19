@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createClient as createSB } from '@supabase/supabase-js'
 
 const VIOLATION_WEIGHTS: Record<string, number> = {
   tab_switch: 2,
@@ -32,7 +33,6 @@ export async function logViolation(attemptId: string, type: string, meta?: any) 
       return sum + (VIOLATION_WEIGHTS[e.type] || 1)
     }, 0)
 
-    const { createClient: createSB } = await import('@supabase/supabase-js')
     const adminClient = createSB(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -63,7 +63,6 @@ export async function heartbeatSession(attemptId: string, sessionToken: string):
     return { valid: false }
   }
 
-  const { createClient: createSB } = await import('@supabase/supabase-js')
   const adminClient = createSB(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
