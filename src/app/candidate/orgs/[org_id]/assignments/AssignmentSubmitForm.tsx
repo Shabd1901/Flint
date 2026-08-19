@@ -55,10 +55,10 @@ export function AssignmentSubmitForm({
     const file = formData.get('attachment') as File | null
 
     if (file && file.size > 0) {
-      // 1. Check max 10MB ceiling
-      if (file.size > 10 * 1024 * 1024) {
+      // 1. Check max 4MB ceiling (Vercel serverless limit is 4.5MB)
+      if (file.size > 4 * 1024 * 1024) {
         const sizeMb = (file.size / (1024 * 1024)).toFixed(2)
-        setErrorMsg(`File size (${sizeMb} MB) exceeds the maximum allowed ceiling limit of 10 MB.`)
+        setErrorMsg(`File size (${sizeMb} MB) exceeds the maximum allowed ceiling limit of 4 MB.`)
         return
       }
 
@@ -78,11 +78,15 @@ export function AssignmentSubmitForm({
     }
 
     startTransition(async () => {
-      const res = await submitAssignmentAction(orgId, formData)
-      if (res?.error) {
-        setErrorMsg(res.error)
-      } else if (res?.success) {
-        setSuccessMsg(res.success)
+      try {
+        const res = await submitAssignmentAction(orgId, formData)
+        if (res?.error) {
+          setErrorMsg(res.error)
+        } else if (res?.success) {
+          setSuccessMsg(res.success)
+        }
+      } catch (err: any) {
+        setErrorMsg('Failed to submit assignment. If your file is large, it may exceed server limits (max 4MB).')
       }
     })
   }
@@ -161,7 +165,7 @@ export function AssignmentSubmitForm({
 
           <div className="flex items-center justify-between text-[11px] text-text-muted px-1">
             <span>Allowed: <strong className="text-text font-medium">{allowedLabels.join(', ')}</strong></span>
-            <span>Max ceiling: <strong className="text-text font-medium">10 MB</strong> (No ZIP files)</span>
+            <span>Max ceiling: <strong className="text-text font-medium">4 MB</strong> (No ZIP files)</span>
           </div>
         </div>
       )}

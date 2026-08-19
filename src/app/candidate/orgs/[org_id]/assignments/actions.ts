@@ -26,10 +26,10 @@ export async function submitAssignmentAction(orgId: string, formData: FormData) 
     let fileUrl: string | null = null
 
     if (file && file.size > 0) {
-      // 1. Max ceiling limit check: 10 MB (10 * 1024 * 1024 bytes)
-      if (file.size > 10 * 1024 * 1024) {
+      // 1. Max ceiling limit check: 4 MB (4 * 1024 * 1024 bytes) to prevent Vercel Serverless Function 4.5MB limit crashes
+      if (file.size > 4 * 1024 * 1024) {
         const sizeMb = (file.size / (1024 * 1024)).toFixed(2)
-        return { error: `File size (${sizeMb} MB) exceeds the maximum allowed ceiling limit of 10 MB.` }
+        return { error: `File size (${sizeMb} MB) exceeds the maximum allowed ceiling limit of 4 MB.` }
       }
 
       const originalName = file.name || 'document'
