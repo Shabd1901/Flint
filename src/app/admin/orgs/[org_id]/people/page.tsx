@@ -55,9 +55,9 @@ export default async function AdminPeoplePage({ params }: { params: Promise<{ or
   // 2. Fetch Candidates enrolled in this org
   const { data: enrollments } = await adminClient
     .from('enrollments')
-    .select('id, created_at, candidate_id')
+    .select('id, joined_at, candidate_id')
     .eq('org_id', org.id)
-    .order('created_at', { ascending: false })
+    .order('joined_at', { ascending: false })
 
   // 3. Fetch Exam & Assignment activity for org
   const { data: orgExams } = await supabase.from('exams').select('id').eq('org_id', org.id)
@@ -87,7 +87,7 @@ export default async function AdminPeoplePage({ params }: { params: Promise<{ or
 
   enrollments?.forEach(e => {
     candidateIdSet.add(e.candidate_id)
-    enrollmentDateMap.set(e.candidate_id, e.created_at)
+    enrollmentDateMap.set(e.candidate_id, e.joined_at)
   })
 
   // Also include candidates who attempted exams for this org even if enrollment record was missing

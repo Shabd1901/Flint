@@ -26,7 +26,7 @@ export default async function MaintainerDashboard({ searchParams }: { searchPara
 
   const { data: orgs, count: totalOrgsCount } = await supabase
     .from('orgs')
-    .select('id, name, created_at, invite_code, profiles(name, email)', { count: 'exact' })
+    .select('id, name, created_at, invite_code, profiles!orgs_admin_id_fkey(name, email)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(from, to)
   const totalOrgs = totalOrgsCount || 0
