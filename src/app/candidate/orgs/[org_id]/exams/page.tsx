@@ -54,9 +54,9 @@ export default async function CandidateExams({ params }: { params: Promise<{ org
 
   return (
     <div className="container-page py-6 md:py-8 space-y-6">
-      <Link href={`/candidate/orgs/${org_id}`} className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-accent transition">
+      <Link href="/candidate" className="inline-flex items-center gap-1.5 text-sm text-text-muted hover:text-accent transition">
         <ArrowLeft size={14} />
-        Back to Classroom
+        Back to Home
       </Link>
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold tracking-tight">My Exams</h1>

@@ -28,8 +28,8 @@ export default async function ContestTake({ params }: { params: Promise<{ org_id
     <TbdNotice
       title="Contest Code Workspace"
       description="The Contest IDE Workspace is tagged as TBD for Version 2 release. All split-pane code editors, real-time leaderboard channels, test case runners, and proctoring locks remain intact."
-      backHref={`/candidate/orgs/${org_id}`}
-      backLabel="Back to Classroom"
+      backHref="/candidate"
+      backLabel="Back to Home"
     />
   )
 }

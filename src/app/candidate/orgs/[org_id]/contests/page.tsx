@@ -52,8 +52,8 @@ export default async function CandidateContests({ params }: { params: Promise<{ 
     <TbdNotice
       title="Candidate Coding Contests"
       description="Coding Contests are scheduled for launch in Version 2. All contest participation systems, time window validators, and workspace triggers have been safely preserved."
-      backHref={`/candidate/orgs/${org_id}`}
-      backLabel="Back to Classroom"
+      backHref="/candidate"
+      backLabel="Back to Home"
     />
   )
 }
