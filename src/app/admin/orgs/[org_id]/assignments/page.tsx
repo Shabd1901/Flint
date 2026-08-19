@@ -9,26 +9,32 @@ export default async function AdminAssignments({ params }: { params: Promise<{ o
   
   const { data: assignments } = await supabase.from('assignments').select('*').eq('org_id', org_id).order('created_at', { ascending: false })
 
-    async function createAssignment(formData: FormData) {
-      'use server'
-      const s = await createClient()
-      const { data: { user } } = await s.auth.getUser()
-      
-      const subTypesRaw = formData.getAll('submission_types').map(String)
-      const submission_types = subTypesRaw.length > 0 ? subTypesRaw : ['file', 'link', 'text']
+  async function createAssignment(formData: FormData) {
+    'use server'
+    const { createClient: createSB } = await import('@supabase/supabase-js')
+    const adminClient = createSB(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
+    
+    const subTypesRaw = formData.getAll('submission_types').map(String)
+    const submission_types = subTypesRaw.length > 0 ? subTypesRaw : ['file', 'link', 'text']
 
-      await s.from('assignments').insert({
-        org_id: org_id,
-        title: formData.get('title'),
-        instructions: formData.get('instructions'),
-        due_at: formData.get('due_at'),
-        max_score: Number(formData.get('max_score')),
-        submission_types
-      })
-      revalidatePath(`/admin/orgs/${org_id}/assignments`)
+    const allowedTypesRaw = formData.getAll('allowed_file_types').map(String)
+    const allowed_file_types = allowedTypesRaw.length > 0 ? allowedTypesRaw : ['pdf', 'csv', 'doc', 'md', 'xlsx']
+
+    await adminClient.from('assignments').insert({
+      org_id: org_id,
+      title: formData.get('title'),
+      instructions: formData.get('instructions'),
+      due_at: formData.get('due_at'),
+      max_score: Number(formData.get('max_score')),
+      submission_types,
+      allowed_file_types
+    })
+    revalidatePath(`/admin/orgs/${org_id}/assignments`)
   }
-
-
 
   return (
     <div className="container-page py-6 md:py-8 space-y-6">
@@ -54,6 +60,11 @@ export default async function AdminAssignments({ params }: { params: Promise<{ o
                   <p className="text-text-muted text-sm line-clamp-2">{a.instructions}</p>
                   <div className="mt-4 text-xs text-text-muted flex items-center gap-4">
                     <span suppressHydrationWarning>Due: {formatDateTime(a.due_at)}</span>
+                    {a.allowed_file_types && (
+                      <span className="bg-surface-soft px-2 py-0.5 rounded font-mono">
+                        Formats: {Array.isArray(a.allowed_file_types) ? a.allowed_file_types.join(', ') : a.allowed_file_types}
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}
@@ -67,22 +78,22 @@ export default async function AdminAssignments({ params }: { params: Promise<{ o
             
             <div>
               <label className="block text-sm font-medium text-text-muted mb-1">Title</label>
-              <input name="title" required className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" placeholder="e.g. React Frontend Task" />
+              <input name="title" required className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm" placeholder="e.g. React Frontend Task" />
             </div>
             
             <div>
               <label className="block text-sm font-medium text-text-muted mb-1">Instructions</label>
-              <textarea name="instructions" required rows={4} className="w-full rounded-md border bg-white px-3 py-2 outline-none ring-accent focus:ring-2 resize-none" placeholder="Provide GitHub template or task details..." />
+              <textarea name="instructions" required rows={4} className="w-full rounded-md border bg-white px-3 py-2 outline-none ring-accent focus:ring-2 text-sm resize-none" placeholder="Provide GitHub template or task details..." />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-text-muted mb-1">Due Date</label>
-              <input type="datetime-local" name="due_at" required className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" />
+              <input type="datetime-local" name="due_at" required className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm" />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-text-muted mb-2">Allowed Submission Formats</label>
-              <div className="flex gap-4 items-center">
+              <div className="flex gap-4 items-center flex-wrap">
                 <label className="flex items-center gap-2 text-sm cursor-pointer hover:opacity-80">
                   <input type="checkbox" name="submission_types" value="file" defaultChecked className="w-4 h-4 text-accent border-line rounded focus:ring-accent" /> File Upload
                 </label>
@@ -95,9 +106,45 @@ export default async function AdminAssignments({ params }: { params: Promise<{ o
               </div>
             </div>
 
+            <div className="p-3.5 bg-surface-soft rounded-xl border border-line space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-text uppercase tracking-wider">
+                  Allowed Document Types (File Upload)
+                </label>
+                <span className="text-[10px] text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                  No ZIP Files
+                </span>
+              </div>
+              <p className="text-[11px] text-text-muted leading-tight">
+                Select document formats candidates can upload (Max ceiling: 10MB per file).
+              </p>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <label className="flex items-center gap-2 text-xs cursor-pointer hover:opacity-80">
+                  <input type="checkbox" name="allowed_file_types" value="pdf" defaultChecked className="accent-accent" />
+                  <span>PDF (<code className="text-[10px]">.pdf</code>)</span>
+                </label>
+                <label className="flex items-center gap-2 text-xs cursor-pointer hover:opacity-80">
+                  <input type="checkbox" name="allowed_file_types" value="csv" defaultChecked className="accent-accent" />
+                  <span>CSV (<code className="text-[10px]">.csv</code>)</span>
+                </label>
+                <label className="flex items-center gap-2 text-xs cursor-pointer hover:opacity-80">
+                  <input type="checkbox" name="allowed_file_types" value="doc" defaultChecked className="accent-accent" />
+                  <span>Word (<code className="text-[10px]">.doc, .docx</code>)</span>
+                </label>
+                <label className="flex items-center gap-2 text-xs cursor-pointer hover:opacity-80">
+                  <input type="checkbox" name="allowed_file_types" value="md" defaultChecked className="accent-accent" />
+                  <span>Markdown (<code className="text-[10px]">.md</code>)</span>
+                </label>
+                <label className="flex items-center gap-2 text-xs cursor-pointer hover:opacity-80 col-span-2">
+                  <input type="checkbox" name="allowed_file_types" value="xlsx" defaultChecked className="accent-accent" />
+                  <span>Excel (<code className="text-[10px]">.xlsx, .xls</code>)</span>
+                </label>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-text-muted mb-1">Max Score</label>
-              <input type="number" name="max_score" required min="1" max="100" defaultValue="100" className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" />
+              <input type="number" name="max_score" required min="1" max="100" defaultValue="100" className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm" />
             </div>
 
             <button className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-accent-strong mt-4">

@@ -26,6 +26,20 @@ export async function submitAssignmentAction(orgId: string, formData: FormData) 
     let fileUrl: string | null = null
 
     if (file && file.size > 0) {
+      // 1. Max ceiling limit check: 10 MB (10 * 1024 * 1024 bytes)
+      if (file.size > 10 * 1024 * 1024) {
+        const sizeMb = (file.size / (1024 * 1024)).toFixed(2)
+        return { error: `File size (${sizeMb} MB) exceeds the maximum allowed ceiling limit of 10 MB.` }
+      }
+
+      const originalName = file.name || 'document'
+      const fileExt = originalName.includes('.') ? originalName.split('.').pop()?.toLowerCase() || '' : ''
+      const forbiddenExts = ['zip', 'rar', '7z', 'tar', 'gz', 'iso', 'exe', 'bat', 'sh']
+
+      if (forbiddenExts.includes(fileExt)) {
+        return { error: 'ZIP and compressed archive files are not allowed. Please upload a standard document (PDF, CSV, Word, Markdown, or Excel).' }
+      }
+
       const bucketName = 'assignment-submissions'
       const { data: buckets } = await adminClient.storage.listBuckets()
       const bucketExists = buckets?.some((b: any) => b.name === bucketName)
@@ -33,9 +47,7 @@ export async function submitAssignmentAction(orgId: string, formData: FormData) 
         await adminClient.storage.createBucket(bucketName, { public: true })
       }
 
-      const originalName = file.name || 'document'
-      const fileExt = originalName.includes('.') ? originalName.split('.').pop() : 'bin'
-      const filePath = `${user.id}/${assignmentId}_${Date.now()}.${fileExt}`
+      const filePath = `${user.id}/${assignmentId}_${Date.now()}.${fileExt || 'bin'}`
 
       const arrayBuffer = await file.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
