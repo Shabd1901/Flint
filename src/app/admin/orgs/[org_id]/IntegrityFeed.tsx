@@ -65,6 +65,11 @@ export function IntegrityFeed({ initialEvents, orgId }: { initialEvents: any[], 
                       {formatTime(event.occurred_at)}
                     </span>
                   </div>
+                  {event.candidate_email && (
+                    <p className="text-[11px] text-text-muted/80 truncate">
+                      {event.candidate_email}
+                    </p>
+                  )}
                   <p className="text-xs text-text-muted mt-0.5 flex items-center gap-1.5">
                     <span className="truncate">{map.label}</span>
                     <span className="w-1 h-1 rounded-full bg-line"></span>

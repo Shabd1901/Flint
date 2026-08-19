@@ -44,7 +44,7 @@ export default async function AdminDashboard({ params }: { params: Promise<{ org
       // 1. Fetch High-Score + High-Violation Queue
       const { data: attempts } = await adminClient
         .from('exam_attempts')
-        .select('id, score, violation_score, status, candidate_id, profiles(name)')
+        .select('id, score, violation_score, status, candidate_id, profiles(name, email)')
         .in('exam_id', examIds)
         .order('violation_score', { ascending: false })
         .limit(10)
@@ -52,7 +52,8 @@ export default async function AdminDashboard({ params }: { params: Promise<{ org
       reviewQueue = (attempts || [])
         .filter(a => a.status === 'submitted' && (a.violation_score || 0) > 0)
         .map(a => ({
-          candidate: (a.profiles as any)?.name || 'Candidate',
+          candidate: (a.profiles as any)?.name || (a.profiles as any)?.email || 'Candidate',
+          email: (a.profiles as any)?.email || '',
           score: a.score ?? '-',
           violation: a.violation_score ?? 0,
           status: (a.violation_score || 0) >= 5 ? 'Review' : 'Clear'
@@ -81,11 +82,11 @@ export default async function AdminDashboard({ params }: { params: Promise<{ org
         const contestAttemptIds = events.map(e => e.contest_attempt_id).filter(Boolean)
 
         const { data: examDetails } = examAttemptIds.length > 0
-          ? await adminClient.from('exam_attempts').select('id, exam_id, profiles(name)').in('id', examAttemptIds)
+          ? await adminClient.from('exam_attempts').select('id, exam_id, profiles(name, email)').in('id', examAttemptIds)
           : { data: [] }
 
         const { data: contestDetails } = contestAttemptIds.length > 0
-          ? await adminClient.from('contest_attempts').select('id, contest_id, profiles(name)').in('id', contestAttemptIds)
+          ? await adminClient.from('contest_attempts').select('id, contest_id, profiles(name, email)').in('id', contestAttemptIds)
           : { data: [] }
 
         const examMapDetails = new Map(examDetails?.map(a => [a.id, a]) || [])
@@ -93,21 +94,25 @@ export default async function AdminDashboard({ params }: { params: Promise<{ org
 
         recentEvents = events.map(e => {
           let candidateName = 'Candidate'
+          let candidateEmail = ''
           let assessmentTitle = 'Assessment'
 
           if (e.attempt_id) {
             const detail = examMapDetails.get(e.attempt_id) as any
-            candidateName = detail?.profiles?.name || 'Candidate'
+            candidateName = detail?.profiles?.name || detail?.profiles?.email || 'Candidate'
+            candidateEmail = detail?.profiles?.email || ''
             assessmentTitle = examMap.get(detail?.exam_id) || 'Exam'
           } else if (e.contest_attempt_id) {
             const detail = contestMapDetails.get(e.contest_attempt_id) as any
-            candidateName = detail?.profiles?.name || 'Candidate'
+            candidateName = detail?.profiles?.name || detail?.profiles?.email || 'Candidate'
+            candidateEmail = detail?.profiles?.email || ''
             assessmentTitle = 'Contest'
           }
 
           return {
             ...e,
             candidate_name: candidateName,
+            candidate_email: candidateEmail,
             exam_title: assessmentTitle
           }
         })
@@ -206,7 +211,10 @@ export default async function AdminDashboard({ params }: { params: Promise<{ org
                   <tbody className="divide-y divide-line">
                     {reviewQueue.map((item, i) => (
                       <tr key={i} className="hover:bg-surface-soft/70 transition-colors group">
-                        <td className="py-3 px-5 font-medium">{item.candidate}</td>
+                        <td className="py-3 px-5 font-medium">
+                          <div>{item.candidate}</div>
+                          {item.email && <div className="text-xs font-normal text-text-muted">{item.email}</div>}
+                        </td>
                         <td className="py-3 px-5 font-mono">{item.score}</td>
                         <td className="py-3 px-5">
                           <div className="flex items-center gap-2">
