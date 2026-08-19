@@ -1,9 +1,9 @@
 import { createClient } from '@/utils/supabase/server'
-import { revalidatePath } from 'next/cache'
 import { formatDateTime } from '@/utils/formatDate'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { redirect } from 'next/navigation'
+import { AssignmentSubmitForm } from './AssignmentSubmitForm'
 
 export default async function CandidateAssignments({ params }: { params: Promise<{ org_id: string }> }) {
   const { org_id } = await params
@@ -20,76 +20,6 @@ export default async function CandidateAssignments({ params }: { params: Promise
   // Find my submissions
   const { data: submissions } = await supabase.from('assignment_submissions').select('*').eq('candidate_id', user!.id)
   const submissionMap = new Map(submissions?.map(s => [s.assignment_id, s]))
-
-    async function submitAssignment(formData: FormData) {
-      'use server'
-      const s = await createClient()
-      const { data: { user } } = await s.auth.getUser()
-      if (!user) return
-      
-      const assignmentId = formData.get('assignment_id') as string
-      const linkUrl = formData.get('github_url') as string
-      const textAnswer = formData.get('text_answer') as string
-      const file = formData.get('attachment') as File | null
-
-      const { createClient: createSB } = await import('@supabase/supabase-js')
-      const adminClient = createSB(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-      )
-
-      let fileUrl: string | null = null
-
-      if (file && file.size > 0) {
-        const bucketName = 'assignment-submissions'
-        const { data: buckets } = await adminClient.storage.listBuckets()
-        const bucketExists = buckets?.some((b: any) => b.name === bucketName)
-        if (!bucketExists) {
-          await adminClient.storage.createBucket(bucketName, { public: true })
-        }
-
-        const fileExt = file.name.split('.').pop()
-        const filePath = `${user.id}/${assignmentId}_${Date.now()}.${fileExt}`
-
-        const arrayBuffer = await file.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-
-        const { data: uploadData, error: uploadError } = await adminClient.storage
-          .from(bucketName)
-          .upload(filePath, buffer, {
-            contentType: file.type || 'application/octet-stream',
-            upsert: true
-          })
-
-        if (!uploadError && uploadData) {
-          const { data: publicUrlData } = adminClient.storage.from(bucketName).getPublicUrl(filePath)
-          fileUrl = publicUrlData.publicUrl
-        }
-      }
-
-      // Preserve existing file_url if resubmitting without attaching a new file
-      const { data: existingSub } = await adminClient
-        .from('assignment_submissions')
-        .select('file_url')
-        .eq('assignment_id', assignmentId)
-        .eq('candidate_id', user.id)
-        .single()
-
-      if (!fileUrl && existingSub?.file_url) {
-        fileUrl = existingSub.file_url
-      }
-
-      await adminClient.from('assignment_submissions').upsert({
-        assignment_id: assignmentId,
-        candidate_id: user.id,
-        link_url: linkUrl || null,
-        file_url: fileUrl || null,
-        text_answer: textAnswer || null
-      }, { onConflict: 'assignment_id,candidate_id' })
-
-      revalidatePath(`/candidate/orgs/${org_id}/assignments`)
-    }
 
   return (
     <div className="container-page py-6 md:py-8 space-y-6">
@@ -168,33 +98,7 @@ export default async function CandidateAssignments({ params }: { params: Promise
                       )}
                     </div>
                   ) : (
-                    <form action={submitAssignment} className="space-y-3">
-                      <input type="hidden" name="assignment_id" value={a.id} />
-                      
-                      {(!a.submission_types || a.submission_types.includes('text')) && (
-                        <textarea 
-                          name="text_answer" 
-                          rows={4} 
-                          placeholder="Type your submission here..." 
-                          className="w-full rounded-md border bg-white px-3 py-2 outline-none ring-accent focus:ring-2 text-sm resize-y" 
-                        />
-                      )}
-                      
-                      {(!a.submission_types || a.submission_types.includes('link')) && (
-                        <input name="github_url" type="url" placeholder="URL link (e.g. GitHub repo, Drive link)" className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm" />
-                      )}
-                      
-                      <div className="flex items-center gap-2">
-                        {(!a.submission_types || a.submission_types.includes('file')) ? (
-                          <input name="attachment" type="file" className="text-xs text-text-muted flex-1 file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-surface-soft file:text-text hover:file:bg-line cursor-pointer" />
-                        ) : (
-                          <div className="flex-1"></div>
-                        )}
-                        <button className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-strong transition whitespace-nowrap">
-                          Submit
-                        </button>
-                      </div>
-                    </form>
+                    <AssignmentSubmitForm assignment={a} orgId={org_id} />
                   )}
                 </div>
               </div>
