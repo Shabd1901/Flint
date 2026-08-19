@@ -136,14 +136,35 @@ export default async function ExamTake({ params }: { params: Promise<{ org_id: s
     } else if (qType === 'file_upload') {
       const file = formData.get('file_answer') as File | null
       if (file && file.size > 0) {
+        const { createClient: createSB } = await import('@supabase/supabase-js')
+        const adminClient = createSB(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!,
+          { auth: { autoRefreshToken: false, persistSession: false } }
+        )
+
+        const bucketName = 'exam-uploads'
+        const { data: buckets } = await adminClient.storage.listBuckets()
+        const bucketExists = buckets?.some((b: any) => b.name === bucketName)
+        if (!bucketExists) {
+          await adminClient.storage.createBucket(bucketName, { public: true })
+        }
+
         const fileExt = file.name.split('.').pop()
         const filePath = `${attemptId}/${questionId}_${Date.now()}.${fileExt}`
-        const { data: uploadData, error: uploadError } = await s.storage
-          .from('exam-uploads')
-          .upload(filePath, file, { upsert: true })
+
+        const arrayBuffer = await file.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+
+        const { data: uploadData, error: uploadError } = await adminClient.storage
+          .from(bucketName)
+          .upload(filePath, buffer, {
+            contentType: file.type || 'application/octet-stream',
+            upsert: true
+          })
         
         if (!uploadError && uploadData) {
-          const { data: publicUrlData } = s.storage.from('exam-uploads').getPublicUrl(filePath)
+          const { data: publicUrlData } = adminClient.storage.from(bucketName).getPublicUrl(filePath)
           fileUrl = publicUrlData.publicUrl
         }
       }

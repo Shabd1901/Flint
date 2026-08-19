@@ -25,35 +25,69 @@ export default async function CandidateAssignments({ params }: { params: Promise
       'use server'
       const s = await createClient()
       const { data: { user } } = await s.auth.getUser()
+      if (!user) return
       
       const assignmentId = formData.get('assignment_id') as string
       const linkUrl = formData.get('github_url') as string
       const textAnswer = formData.get('text_answer') as string
       const file = formData.get('attachment') as File | null
 
+      const { createClient: createSB } = await import('@supabase/supabase-js')
+      const adminClient = createSB(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { autoRefreshToken: false, persistSession: false } }
+      )
+
       let fileUrl: string | null = null
 
       if (file && file.size > 0) {
-        const fileExt = file.name.split('.').pop()
-        const filePath = `${user!.id}/${assignmentId}_${Date.now()}.${fileExt}`
+        const bucketName = 'assignment-submissions'
+        const { data: buckets } = await adminClient.storage.listBuckets()
+        const bucketExists = buckets?.some((b: any) => b.name === bucketName)
+        if (!bucketExists) {
+          await adminClient.storage.createBucket(bucketName, { public: true })
+        }
 
-        const { data: uploadData, error: uploadError } = await s.storage
-          .from('assignment-submissions')
-          .upload(filePath, file, { upsert: true })
+        const fileExt = file.name.split('.').pop()
+        const filePath = `${user.id}/${assignmentId}_${Date.now()}.${fileExt}`
+
+        const arrayBuffer = await file.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+
+        const { data: uploadData, error: uploadError } = await adminClient.storage
+          .from(bucketName)
+          .upload(filePath, buffer, {
+            contentType: file.type || 'application/octet-stream',
+            upsert: true
+          })
 
         if (!uploadError && uploadData) {
-          const { data: publicUrlData } = s.storage.from('assignment-submissions').getPublicUrl(filePath)
+          const { data: publicUrlData } = adminClient.storage.from(bucketName).getPublicUrl(filePath)
           fileUrl = publicUrlData.publicUrl
         }
       }
 
-      await s.from('assignment_submissions').insert({
+      // Preserve existing file_url if resubmitting without attaching a new file
+      const { data: existingSub } = await adminClient
+        .from('assignment_submissions')
+        .select('file_url')
+        .eq('assignment_id', assignmentId)
+        .eq('candidate_id', user.id)
+        .single()
+
+      if (!fileUrl && existingSub?.file_url) {
+        fileUrl = existingSub.file_url
+      }
+
+      await adminClient.from('assignment_submissions').upsert({
         assignment_id: assignmentId,
-        candidate_id: user!.id,
+        candidate_id: user.id,
         link_url: linkUrl || null,
         file_url: fileUrl || null,
         text_answer: textAnswer || null
-      })
+      }, { onConflict: 'assignment_id,candidate_id' })
+
       revalidatePath(`/candidate/orgs/${org_id}/assignments`)
     }
 
