@@ -63,6 +63,8 @@ export default async function ExamTake({ params }: { params: Promise<{ org_id: s
       .single()
 
     if (!updatedAttempt) {
+      const { revalidatePath } = await import('next/cache')
+      revalidatePath(`/candidate/orgs/${org_id}/exams`)
       redirect(`/candidate/orgs/${org_id}/exams`)
       return
     }
@@ -111,6 +113,8 @@ export default async function ExamTake({ params }: { params: Promise<{ org_id: s
       .update({ score: totalScore })
       .eq('id', updatedAttempt.id)
 
+    const { revalidatePath } = await import('next/cache')
+    revalidatePath(`/candidate/orgs/${org_id}/exams`)
     redirect(`/candidate/orgs/${org_id}/exams`)
   }
 
