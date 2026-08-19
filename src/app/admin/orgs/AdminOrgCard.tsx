@@ -4,10 +4,12 @@ import { useState, useTransition } from 'react'
 import { Trash2, Key, Users, X, RefreshCw, UserPlus, Edit2, Check, MoreVertical, Copy, GraduationCap } from 'lucide-react'
 import { deleteOrg, addCoAdminAction, removeCoAdminAction, updateOrg } from './actions'
 import Link from 'next/link'
+import { ConfirmModal } from '@/components/ConfirmModal'
 
 export function AdminOrgCard({ org, currentUserId }: { org: any, currentUserId: string }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [adminToRemove, setAdminToRemove] = useState<{ id: string; name: string } | null>(null)
   const [isPending, startTransition] = useTransition()
   
   const [isEditingName, setIsEditingName] = useState(false)

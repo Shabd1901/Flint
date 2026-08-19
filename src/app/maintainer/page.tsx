@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { formatDate, formatDateTime } from '@/utils/formatDate'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { UserManagementList, UserProfile } from './UserManagementList'
+import { DeleteOrgButton } from './DeleteOrgButton'
 
 export default async function MaintainerDashboard({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const { page } = await searchParams
@@ -139,6 +140,7 @@ export default async function MaintainerDashboard({ searchParams }: { searchPara
                 <th className="py-2">Admin</th>
                 <th className="py-2">Invite Code</th>
                 <th className="py-2">Created at</th>
+                <th className="py-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -148,11 +150,14 @@ export default async function MaintainerDashboard({ searchParams }: { searchPara
                   <td className="py-2 text-text-muted">{org.profiles ? `${org.profiles.name} (${org.profiles.email})` : <span className="italic">Unlinked</span>}</td>
                   <td className="py-2"><code className="rounded bg-surface-soft px-2 py-0.5 text-xs font-mono">{org.invite_code}</code></td>
                   <td className="py-2 text-text-muted" suppressHydrationWarning>{formatDate(org.created_at)}</td>
+                  <td className="py-2 text-right">
+                    <DeleteOrgButton id={org.id} name={org.name} />
+                  </td>
                 </tr>
               ))}
               {(!orgs || orgs.length === 0) && (
                 <tr>
-                  <td colSpan={4} className="py-6 text-center text-text-muted">No organizations found.</td>
+                  <td colSpan={5} className="py-6 text-center text-text-muted">No organizations found.</td>
                 </tr>
               )}
             </tbody>
