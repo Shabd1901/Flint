@@ -17,6 +17,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return new NextResponse('Contest not found', { status: 404 })
   }
 
+  // Verify org admin authorization
+  const { data: isOrgAdmin } = await supabase.rpc('is_org_admin', { check_org_id: contest.org_id })
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (!isOrgAdmin && profile?.role !== 'maintainer') {
+    return new NextResponse('Forbidden', { status: 403 })
+  }
+
   // Fetch attempts with profile info
   const { data: attempts } = await supabase
     .from('contest_attempts')
