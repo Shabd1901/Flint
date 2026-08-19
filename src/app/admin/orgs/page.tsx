@@ -68,7 +68,9 @@ export default async function AdminOrgs() {
         ...ca,
         profiles: profileMap.get(ca.admin_id)
       }))
-    }))
+    })).filter(o => 
+      o.admin_id === user.id || o.org_admins?.some((ca: any) => ca.admin_id === user.id)
+    )
   }
 
   return (
