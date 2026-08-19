@@ -49,12 +49,9 @@ export async function submitAssignmentAction(orgId: string, formData: FormData) 
 
       const filePath = `${user.id}/${assignmentId}_${Date.now()}.${fileExt || 'bin'}`
 
-      const arrayBuffer = await file.arrayBuffer()
-      const buffer = Buffer.from(arrayBuffer)
-
       const { data: uploadData, error: uploadError } = await adminClient.storage
         .from(bucketName)
-        .upload(filePath, buffer, {
+        .upload(filePath, file, {
           contentType: file.type || 'application/octet-stream',
           upsert: true
         })
