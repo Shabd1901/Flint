@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Trash2, Key, Users, X, RefreshCw, UserPlus, Edit2, Check, MoreVertical, Copy } from 'lucide-react'
+import { Trash2, Key, Users, X, RefreshCw, UserPlus, Edit2, Check, MoreVertical, Copy, GraduationCap } from 'lucide-react'
 import { deleteOrg, addCoAdminAction, removeCoAdminAction, updateOrg } from './actions'
 import Link from 'next/link'
 
@@ -172,6 +172,12 @@ export function AdminOrgCard({ org, currentUserId }: { org: any, currentUserId: 
           <div className="flex items-center gap-2 text-sm text-text-muted">
             <Users className="w-3.5 h-3.5 flex-shrink-0" />
             <span>{coAdmins.length} co-admin{coAdmins.length !== 1 ? 's' : ''}</span>
+          </div>
+
+          {/* Candidates count */}
+          <div className="flex items-center gap-2 text-sm text-text-muted">
+            <GraduationCap className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>{org.candidate_count ?? 0} candidate{(org.candidate_count ?? 0) !== 1 ? 's' : ''}</span>
           </div>
 
           {feedback && (

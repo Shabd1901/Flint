@@ -26,6 +26,19 @@ export default async function AdminOrgs() {
       .from('org_admins')
       .select('org_id, admin_id')
       .in('org_id', orgIds)
+
+    // Fetch candidate enrollments count per org
+    const { data: enrollmentsData } = await supabase
+      .from('enrollments')
+      .select('org_id')
+      .in('org_id', orgIds)
+
+    const candidateCountsMap = new Map<string, number>()
+    if (enrollmentsData) {
+      enrollmentsData.forEach(e => {
+        candidateCountsMap.set(e.org_id, (candidateCountsMap.get(e.org_id) || 0) + 1)
+      })
+    }
       
     // Group org_admins by org_id
     const orgAdminsMap = new Map<string, any[]>()
@@ -50,6 +63,7 @@ export default async function AdminOrgs() {
 
     finalOrgs = finalOrgs.map(o => ({
       ...o,
+      candidate_count: candidateCountsMap.get(o.id) || 0,
       org_admins: o.org_admins?.map((ca: any) => ({
         ...ca,
         profiles: profileMap.get(ca.admin_id)
