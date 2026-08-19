@@ -34,6 +34,8 @@ export async function deleteUserAction(userId: string) {
   }
 
   revalidatePath('/maintainer')
+  revalidatePath('/maintainer/candidates')
+  revalidatePath('/maintainer/admins')
   return { success: 'User deleted successfully.' }
 }
 

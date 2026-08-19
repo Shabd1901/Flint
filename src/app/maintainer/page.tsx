@@ -78,6 +78,8 @@ export default async function MaintainerDashboard({ searchParams }: { searchPara
     revalidatePath('/maintainer')
   }
 
+  const candidatesCount = (allProfiles || []).filter(p => p.role === 'candidate').length
+
   return (
     <div className="container-page py-6 md:py-8 space-y-6">
       <header className="surface-card p-5">
@@ -96,8 +98,8 @@ export default async function MaintainerDashboard({ searchParams }: { searchPara
           <p className="mt-2 font-mono text-3xl font-semibold">{exams?.length || 0}</p>
         </article>
         <article className="surface-card hover-lift p-5">
-          <p className="text-sm text-text-muted">Users</p>
-          <p className="mt-2 font-mono text-3xl font-semibold">{allProfiles?.length || 0}</p>
+          <p className="text-sm text-text-muted">Total Candidates</p>
+          <p className="mt-2 font-mono text-3xl font-semibold text-accent">{candidatesCount}</p>
         </article>
         <article className="surface-card hover-lift p-5">
           <p className="text-sm text-text-muted">Integrity events</p>

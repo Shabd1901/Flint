@@ -1,5 +1,5 @@
 'use client'
-import { LayoutDashboard, Users } from 'lucide-react'
+import { LayoutDashboard, Users, GraduationCap } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 
 export function MaintainerSidebar({ signOutAction }: { signOutAction: () => Promise<void> }) {
@@ -10,6 +10,7 @@ export function MaintainerSidebar({ signOutAction }: { signOutAction: () => Prom
       navItems={[
         { label: 'Global Dashboard', href: '/maintainer', icon: LayoutDashboard, exact: true },
         { label: 'Admin Management', href: '/maintainer/admins', icon: Users },
+        { label: 'Candidate Management', href: '/maintainer/candidates', icon: GraduationCap },
       ]}
       handleSignOut={signOutAction}
     />
