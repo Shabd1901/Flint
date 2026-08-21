@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { ProctoringWrapper } from './ProctoringWrapper'
 import { ExamTimer } from './ExamTimer'
 import { QuestionForm } from './QuestionForm'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { AlertTriangle, RefreshCw, CheckCircle } from 'lucide-react'
 
 export function ExamTakeWorkspace({
   attempt,
@@ -45,6 +45,22 @@ export function ExamTakeWorkspace({
     startTransition(async () => {
       await submitExam()
     })
+  }
+
+  // Full-screen submission overlay to prevent black screen flash
+  if (isSubmitting || isPending) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 bg-accent/10 text-accent rounded-full flex items-center justify-center mx-auto">
+            <RefreshCw size={32} className="animate-spin" />
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-text">Submitting Your Exam...</h2>
+          <p className="text-sm text-text-muted">Please wait while your answers are being graded.</p>
+          <p className="text-xs text-text-muted">Do not close this window.</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -118,3 +134,4 @@ export function ExamTakeWorkspace({
     </div>
   )
 }
+

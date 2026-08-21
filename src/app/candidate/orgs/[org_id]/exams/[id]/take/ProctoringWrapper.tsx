@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { ShieldAlert, Maximize2, AlertTriangle, X } from 'lucide-react'
 
 const VIOLATION_LABELS: Record<string, string> = {
@@ -33,6 +33,8 @@ export function ProctoringWrapper({
   const [isProctoringStarted, setIsProctoringStarted] = useState(false)
   const [warningCount, setWarningCount] = useState(0)
   const [activeWarning, setActiveWarning] = useState<string | null>(null)
+  const [showFullscreenOverlay, setShowFullscreenOverlay] = useState(false)
+  const reEnterTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     isSubmittingRef.current = isSubmitting
@@ -42,6 +44,36 @@ export function ProctoringWrapper({
     document.documentElement.requestFullscreen()
       .then(() => setIsProctoringStarted(true))
       .catch(() => setIsProctoringStarted(true))
+  }
+
+  // Re-enter fullscreen with overlay warning
+  const forceReEnterFullscreen = useCallback(() => {
+    if (isSubmittingRef.current) return
+    
+    setShowFullscreenOverlay(true)
+    
+    // Clear any existing timeout
+    if (reEnterTimeoutRef.current) {
+      clearTimeout(reEnterTimeoutRef.current)
+    }
+    
+    // Auto-attempt re-enter after a short delay (browsers need user gesture, 
+    // so we show a mandatory overlay that forces the user to click)
+    reEnterTimeoutRef.current = setTimeout(() => {
+      // Try to auto-re-enter (may fail without user gesture in some browsers)
+      document.documentElement.requestFullscreen().catch(() => {
+        // If auto-re-enter fails, the overlay stays visible forcing user to click
+      })
+    }, 500)
+  }, [])
+
+  const handleReEnterClick = () => {
+    document.documentElement.requestFullscreen()
+      .then(() => setShowFullscreenOverlay(false))
+      .catch(() => {
+        // Last resort: just hide overlay
+        setShowFullscreenOverlay(false)
+      })
   }
 
   useEffect(() => {
@@ -108,8 +140,13 @@ export function ProctoringWrapper({
     }
 
     const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
+      if (!document.fullscreenElement && !isSubmittingRef.current) {
         rateLimitedLog('fullscreen_exit', { action: 'exited_fullscreen' })
+        // Immediately force re-entry
+        forceReEnterFullscreen()
+      } else if (document.fullscreenElement) {
+        // Successfully re-entered fullscreen, hide overlay
+        setShowFullscreenOverlay(false)
       }
     }
 
@@ -139,11 +176,32 @@ export function ProctoringWrapper({
       rateLimitedLog('copy_paste_blocked', { action: e.type })
     }
 
-    // Block keyboard copy/paste/cut shortcuts (Ctrl+C, Ctrl+V, Ctrl+X, Cmd+C, Cmd+V, Cmd+X)
+    // Block keyboard shortcuts including Escape key warning
     // DO NOT block Undo (Ctrl+Z / Cmd+Z) or Redo (Ctrl+Y) so candidates can edit text freely
     const handleKeyDown = (e: KeyboardEvent) => {
       const isCtrlOrCmd = e.ctrlKey || e.metaKey
       const key = e.key.toLowerCase()
+
+      // Block Escape key (browser will still exit fullscreen, but we intercept it)
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      }
+
+      // Block F11 (toggle fullscreen shortcut)
+      if (e.key === 'F11') {
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      }
+
+      // Block Alt+Tab indicator (we can't truly prevent it, but log it)
+      if (e.altKey && key === 'tab') {
+        e.preventDefault()
+        rateLimitedLog('tab_switch', { action: 'alt_tab_attempt' })
+        return
+      }
 
       if (isCtrlOrCmd && (key === 'c' || key === 'v' || key === 'x')) {
         e.preventDefault()
@@ -159,10 +217,11 @@ export function ProctoringWrapper({
     document.addEventListener('copy', handleCopyPaste)
     document.addEventListener('paste', handleCopyPaste)
     document.addEventListener('cut', handleCopyPaste)
-    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('keydown', handleKeyDown, true) // use capture phase
     
     return () => {
       clearInterval(heartbeatInterval)
+      if (reEnterTimeoutRef.current) clearTimeout(reEnterTimeoutRef.current)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('blur', handleBlur)
       document.removeEventListener('fullscreenchange', handleFullscreenChange)
@@ -171,9 +230,9 @@ export function ProctoringWrapper({
       document.removeEventListener('copy', handleCopyPaste)
       document.removeEventListener('paste', handleCopyPaste)
       document.removeEventListener('cut', handleCopyPaste)
-      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('keydown', handleKeyDown, true)
     }
-  }, [attemptId, logAction, heartbeatAction, isProctoringStarted, onWarningCountChange])
+  }, [attemptId, logAction, heartbeatAction, isProctoringStarted, onWarningCountChange, forceReEnterFullscreen])
 
   if (sessionLocked) {
     return (
@@ -202,6 +261,9 @@ export function ProctoringWrapper({
           <p className="text-sm text-text-muted leading-relaxed">
             This session is monitored for integrity. Right-clicking, copying, pasting, tab switches, exiting fullscreen, or opening developer tools will be logged and reviewed by your administrator.
           </p>
+          <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-700 font-semibold">
+            ⚠️ Do NOT press Escape or exit fullscreen during the exam. Any attempt will be flagged and you will be forced back into the exam environment.
+          </div>
           <div className="pt-4">
             <button
               onClick={handleStartFullscreen}
@@ -218,7 +280,35 @@ export function ProctoringWrapper({
 
   return (
     <>
-      {activeWarning && (
+      {/* Fullscreen Re-Entry Overlay — blocks all interaction until user re-enters */}
+      {showFullscreenOverlay && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md p-4">
+          <div className="max-w-md bg-white rounded-2xl p-8 text-center shadow-2xl border-2 border-rose-300 space-y-4 animate-in zoom-in">
+            <div className="w-20 h-20 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto animate-pulse">
+              <AlertTriangle size={40} />
+            </div>
+            <h2 className="text-2xl font-bold text-rose-700">⚠️ Fullscreen Violation!</h2>
+            <p className="text-sm text-text-muted leading-relaxed">
+              You exited fullscreen mode during a proctored assessment. This violation has been <strong className="text-rose-600">logged and flagged</strong> to your instructor.
+            </p>
+            <p className="text-xs text-rose-600 font-bold uppercase tracking-wider">
+              Warning #{warningCount} recorded
+            </p>
+            <button
+              onClick={handleReEnterClick}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-6 py-4 text-base font-bold text-white hover:bg-rose-700 transition shadow-lg"
+            >
+              <Maximize2 size={18} />
+              Re-Enter Fullscreen Now
+            </button>
+            <p className="text-[11px] text-text-muted">
+              You cannot continue the exam until you re-enter fullscreen mode.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {activeWarning && !showFullscreenOverlay && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-bounce">
           <div className="flex items-center gap-3 bg-rose-600 text-white px-5 py-3 rounded-xl shadow-2xl border border-rose-400 text-sm font-semibold">
             <AlertTriangle size={20} className="shrink-0 animate-pulse" />
