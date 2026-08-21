@@ -12,7 +12,7 @@ export default async function CandidateLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('name, email, role, tp_uid')
+    .select('name, email, role')
     .eq('id', user.id)
     .single()
 

@@ -32,7 +32,7 @@ export default async function MaintainerCandidatesPage() {
   // 1. Fetch all profiles
   const { data: allProfiles } = await adminClient
     .from('profiles')
-    .select('id, name, email, role, tp_uid, created_at')
+    .select('id, name, email, role, created_at')
     .order('created_at', { ascending: false })
 
   // 2. Fetch all Auth Users as fallback

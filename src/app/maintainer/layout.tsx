@@ -12,7 +12,7 @@ export default async function MaintainerLayout({ children }: { children: React.R
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('name, email, role, tp_uid')
+    .select('name, email, role')
     .eq('id', user.id)
     .single()
 
