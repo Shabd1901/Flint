@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { Play, Send, CheckCircle2, XCircle, Code2, BookOpen, Trophy, Clock, History, AlertCircle } from 'lucide-react'
-import { runSampleCode, submitFullSolution } from './actions'
+import { getTestCases, saveSubmission } from './actions'
 import { Leaderboard } from '@/components/Leaderboard'
+import Script from 'next/script'
 
 export function CodeWorkspace({
   contestId,
@@ -28,10 +29,81 @@ export function CodeWorkspace({
   const [activeLeftTab, setActiveLeftTab] = useState<'problem' | 'leaderboard'>('problem')
   const [isConsoleOpen, setIsConsoleOpen] = useState(false)
 
+  const [pyodideReady, setPyodideReady] = useState(false)
+
   const handleLanguageChange = (newLang: 'python' | 'javascript') => {
     setLanguage(newLang)
     setCode(newLang === 'python' ? starterPy : starterJs)
     setResults(null)
+  }
+
+  const runPyodideCode = async (testCases: any[]) => {
+    if (!(window as any).pyodide) {
+      alert("Pyodide is still loading...")
+      return null
+    }
+    const pyodide = (window as any).pyodide
+    const localResults = []
+
+    for (const tc of testCases) {
+      let passed = false
+      let stdout = ''
+      let stderr = ''
+      let timeStr = '0ms'
+      
+      const startTime = performance.now()
+      
+      try {
+        pyodide.setStdout({ batched: (msg: string) => stdout += msg + '\n' })
+        
+        // Expose input to python namespace
+        pyodide.globals.set("input_data", tc.input)
+        
+        // Create an execution wrapper to run user code and call it with input
+        const execWrapper = `
+import sys
+from io import StringIO
+# Reset stdout
+sys.stdout = StringIO()
+
+${code}
+
+if 'solution' in locals():
+    # Pass input_data to solution
+    res = solution(input_data)
+    if res is not None:
+        print(res)
+out = sys.stdout.getvalue()
+out
+`
+        const rawOut = await pyodide.runPythonAsync(execWrapper)
+        const endTime = performance.now()
+        timeStr = Math.round(endTime - startTime) + 'ms'
+        
+        stdout = stdout.trim()
+        if (rawOut !== undefined && rawOut !== null && stdout === '') {
+           stdout = String(rawOut).trim()
+        }
+        
+        const expected = tc.expected_output.trim()
+        passed = (stdout === expected)
+        
+      } catch (err: any) {
+        const endTime = performance.now()
+        timeStr = Math.round(endTime - startTime) + 'ms'
+        stderr = err.message || String(err)
+        passed = false
+      }
+      
+      localResults.push({
+        passed,
+        stdout,
+        stderr,
+        time: timeStr
+      })
+    }
+    
+    return localResults
   }
 
   const handleRunSample = async () => {
@@ -39,10 +111,13 @@ export function CodeWorkspace({
     setSubmitSummary(null)
     setIsConsoleOpen(true)
     try {
-      const res = await runSampleCode(currentProblem.id, language, code)
-      setResults(res.results)
-    } catch {
-      // error handled
+      const testCases = await getTestCases(currentProblem.id, 'sample')
+      const res = await runPyodideCode(testCases)
+      if (res) {
+        setResults(res)
+      }
+    } catch (e: any) {
+       console.error(e)
     } finally {
       setIsExecuting(false)
     }
@@ -52,11 +127,27 @@ export function CodeWorkspace({
     setIsExecuting(true)
     setIsConsoleOpen(true)
     try {
-      const res = await submitFullSolution(contestId, attemptId, currentProblem.id, language, code)
-      setResults(res.results)
-      setSubmitSummary({ score: res.score, passedCount: res.passedCount, totalCount: res.totalCount })
-    } catch {
-      // error handled
+      const testCases = await getTestCases(currentProblem.id, 'all')
+      const res = await runPyodideCode(testCases)
+      
+      if (res) {
+        let passedCount = 0
+        let score = 0
+        res.forEach((r, idx) => {
+          if (r.passed) {
+             passedCount++
+             score += Number(testCases[idx].weight) || 1
+          }
+        })
+        const totalCount = testCases.length
+        
+        await saveSubmission(contestId, attemptId, currentProblem.id, language, code, res, passedCount, totalCount, score)
+        
+        setResults(res)
+        setSubmitSummary({ score, passedCount, totalCount })
+      }
+    } catch (e: any) {
+      console.error(e)
     } finally {
       setIsExecuting(false)
     }
@@ -64,6 +155,15 @@ export function CodeWorkspace({
 
   return (
     <div className="flex h-full w-full">
+      <Script 
+        src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js" 
+        onLoad={async () => {
+          if (!(window as any).pyodide) {
+            (window as any).pyodide = await (window as any).loadPyodide()
+            setPyodideReady(true)
+          }
+        }}
+      />
       {/* LEFT PANE - Problem & Tabs (Fixed Width, e.g. 40%) */}
       <div className="w-[45%] flex flex-col border-r bg-white h-full overflow-hidden">
         
@@ -109,7 +209,30 @@ export function CodeWorkspace({
               </div>
 
               <div className="prose prose-sm prose-slate max-w-none text-text">
-                <div className="whitespace-pre-wrap leading-relaxed">{currentProblem?.statement}</div>
+                <div className="mb-6">
+                  <div className="whitespace-pre-wrap leading-relaxed">{currentProblem?.description}</div>
+                </div>
+                
+                {currentProblem?.input_format && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-bold tracking-wider uppercase text-text-muted mb-2">Input Format</h4>
+                    <div className="whitespace-pre-wrap leading-relaxed bg-surface-soft p-3 rounded-lg border border-line">{currentProblem.input_format}</div>
+                  </div>
+                )}
+                
+                {currentProblem?.output_format && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-bold tracking-wider uppercase text-text-muted mb-2">Output Format</h4>
+                    <div className="whitespace-pre-wrap leading-relaxed bg-surface-soft p-3 rounded-lg border border-line">{currentProblem.output_format}</div>
+                  </div>
+                )}
+
+                {currentProblem?.constraints && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-bold tracking-wider uppercase text-text-muted mb-2">Constraints</h4>
+                    <div className="whitespace-pre-wrap leading-relaxed bg-surface-soft p-3 rounded-lg border border-line font-mono text-xs">{currentProblem.constraints}</div>
+                  </div>
+                )}
               </div>
             </div>
           )}

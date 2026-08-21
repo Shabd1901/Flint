@@ -3,78 +3,31 @@
 import { createClient } from '@/utils/supabase/server'
 import { runCode, ExecutionResult } from '@/utils/compiler'
 
-export async function runSampleCode(
-  problemId: string,
-  language: string,
-  sourceCode: string
-): Promise<{ results: ExecutionResult[] }> {
+export async function getTestCases(problemId: string, type: 'sample' | 'all') {
   const supabase = await createClient()
-
-  // Fetch sample test cases only
-  const { data: testCases } = await supabase
-    .from('test_cases')
-    .select('*')
-    .eq('problem_id', problemId)
-    .eq('is_sample', true)
-
-  const results: ExecutionResult[] = []
-
-  for (const tc of (testCases || [])) {
-    const execResult = await runCode(language, sourceCode, {
-      input: tc.input,
-      expected_output: tc.expected_output,
-      is_sample: true,
-      weight: tc.weight || 1
-    })
-    results.push(execResult)
+  
+  let query = supabase.from('test_cases').select('*').eq('problem_id', problemId)
+  if (type === 'sample') {
+    query = query.eq('is_sample', true)
   }
-
-  return { results }
+  
+  const { data: testCases } = await query
+  return testCases || []
 }
 
-export async function submitFullSolution(
+export async function saveSubmission(
   contestId: string,
   contestAttemptId: string,
   problemId: string,
   language: string,
-  sourceCode: string
-): Promise<{ passedCount: number; totalCount: number; score: number; results: ExecutionResult[] }> {
+  sourceCode: string,
+  results: any[],
+  passedCount: number,
+  totalCount: number,
+  score: number
+) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-
-  // Block if attempt is not in_progress
-  const { data: attempt } = await supabase.from('contest_attempts').select('status').eq('id', contestAttemptId).single()
-  if (attempt?.status !== 'in_progress') {
-    throw new Error('Attempt is no longer in progress')
-  }
-
-  // Fetch all test cases (sample + hidden)
-  const { data: testCases } = await supabase
-    .from('test_cases')
-    .select('*')
-    .eq('problem_id', problemId)
-
-  let passedCount = 0
-  let totalScore = 0
-  const results: ExecutionResult[] = []
-
-  for (const tc of (testCases || [])) {
-    const execResult = await runCode(language, sourceCode, {
-      input: tc.input,
-      expected_output: tc.expected_output,
-      is_sample: tc.is_sample,
-      weight: tc.weight || 1
-    })
-
-    results.push(execResult)
-
-    if (execResult.passed) {
-      passedCount++
-      totalScore += Number(tc.weight) || 1
-    }
-  }
-
-  const totalCount = testCases?.length || 0
 
   // Persist code_submission
   await supabase.from('code_submissions').insert({
@@ -84,7 +37,7 @@ export async function submitFullSolution(
     source_code: sourceCode,
     passed_count: passedCount,
     total_count: totalCount,
-    score: totalScore,
+    score: score,
     judge_raw: JSON.stringify(results)
   })
 
@@ -99,13 +52,13 @@ export async function submitFullSolution(
     payload: {
       candidate_id: user!.id,
       name: profile?.name || 'Candidate',
-      score: totalScore,
+      score: score,
       passed_count: passedCount,
       total_count: totalCount
     }
   })
 
-  return { passedCount, totalCount, score: totalScore, results }
+  return { success: true }
 }
 
 export async function logContestViolation(attemptId: string, type: string, meta?: any) {

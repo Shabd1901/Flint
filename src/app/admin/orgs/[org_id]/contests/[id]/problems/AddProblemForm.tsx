@@ -34,8 +34,23 @@ export function AddProblemForm({ orgId, contestId }: { orgId: string, contestId:
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-text-muted mb-1">Problem Statement</label>
-        <textarea name="statement" required rows={4} disabled={isPending} className="w-full rounded-md border bg-white px-3 py-2 outline-none ring-accent focus:ring-2 text-sm resize-none disabled:opacity-50" placeholder="Explain the problem, constraints, and provide examples..." />
+        <label className="block text-sm font-medium text-text-muted mb-1">Description</label>
+        <textarea name="description" required rows={4} disabled={isPending} className="w-full rounded-md border bg-white px-3 py-2 outline-none ring-accent focus:ring-2 text-sm resize-none disabled:opacity-50" placeholder="Explain the problem..." />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-text-muted mb-1">Input Format</label>
+        <textarea name="input_format" required rows={2} disabled={isPending} className="w-full rounded-md border bg-white px-3 py-2 outline-none ring-accent focus:ring-2 text-sm resize-none disabled:opacity-50" placeholder="e.g. The first line contains an integer N..." />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-text-muted mb-1">Output Format</label>
+        <textarea name="output_format" required rows={2} disabled={isPending} className="w-full rounded-md border bg-white px-3 py-2 outline-none ring-accent focus:ring-2 text-sm resize-none disabled:opacity-50" placeholder="e.g. Print a single integer denoting..." />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-text-muted mb-1">Constraints</label>
+        <textarea name="constraints" required rows={2} disabled={isPending} className="w-full rounded-md border bg-white px-3 py-2 outline-none ring-accent focus:ring-2 text-sm resize-none disabled:opacity-50" placeholder="e.g. 1 <= N <= 10^5" />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -77,6 +92,21 @@ export function AddProblemForm({ orgId, contestId }: { orgId: string, contestId:
         ) : (
           'Add Problem'
         )}
+      </button>
+
+      <button 
+        type="button"
+        onClick={async () => {
+           startTransition(async () => {
+              const { seedProblemsAction } = await import('./actions')
+              const result = await seedProblemsAction(orgId, contestId)
+              if (result?.error) toast.error(result.error)
+              else toast.success('2 Simple Questions Pre-made!')
+           })
+        }}
+        disabled={isPending} 
+        className="w-full flex justify-center items-center rounded-md border border-line px-4 py-2 text-sm font-semibold text-text-muted hover:bg-surface-soft transition mt-2 disabled:opacity-70 disabled:cursor-not-allowed">
+        Premake 2 Simple Questions
       </button>
     </form>
   )

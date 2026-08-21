@@ -162,7 +162,11 @@ CREATE TABLE problems (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     contest_id UUID NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
-    statement TEXT NOT NULL,
+    statement TEXT,
+    description TEXT NOT NULL,
+    input_format TEXT,
+    output_format TEXT,
+    constraints TEXT,
     starter_code JSONB,
     languages JSONB NOT NULL DEFAULT '["python", "javascript", "cpp", "java"]'::jsonb
 );

@@ -53,7 +53,7 @@ export default async function ContestProblems({ params }: { params: Promise<{ or
                       {(p.test_cases as any[])?.length || 0} Test Cases
                     </span>
                   </div>
-                  <p className="text-text-muted text-sm line-clamp-3 whitespace-pre-wrap">{p.statement}</p>
+                  <p className="text-text-muted text-sm line-clamp-3 whitespace-pre-wrap">{p.description}</p>
                   <div className="mt-4 pt-4 border-t border-line flex gap-2">
                     {p.languages?.map((l: string) => (
                       <span key={l} className="text-xs font-mono bg-blue-50 text-blue-700 px-2 py-0.5 rounded">
