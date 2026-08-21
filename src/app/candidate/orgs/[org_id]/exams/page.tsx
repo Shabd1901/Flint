@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import { startExamAction } from './actions'
 
 export default async function CandidateExams({ params }: { params: Promise<{ org_id: string }> }) {
   const { org_id } = await params
@@ -19,39 +20,6 @@ export default async function CandidateExams({ params }: { params: Promise<{ org
   // Find my attempts
   const { data: attempts } = await supabase.from('exam_attempts').select('*').eq('candidate_id', user.id)
   const attemptMap = new Map(attempts?.map(a => [a.exam_id, a]))
-
-  async function startExam(formData: FormData) {
-    'use server'
-    const s = await createClient()
-    const { data: { user } } = await s.auth.getUser()
-    
-    const examId = formData.get('exam_id') as string
-    const actionOrgId = formData.get('org_id') as string
-
-    // Validate start_at & end_at window
-    const { data: ex } = await s.from('exams').select('start_at, end_at, status').eq('id', examId).single()
-    if (!ex || ex.status !== 'live') return
-
-    const now = new Date()
-    if (ex.start_at && now < new Date(ex.start_at)) return
-    if (ex.end_at && now > new Date(ex.end_at)) return
-
-    // Create attempt
-    const { data: attempt, error } = await s.from('exam_attempts').insert({
-      exam_id: examId,
-      candidate_id: user!.id,
-      status: 'in_progress',
-    }).select().single()
-
-    if (error) {
-      console.error('[startExam] Error creating attempt:', error)
-      return
-    }
-
-    if (attempt) {
-      redirect(`/candidate/orgs/${actionOrgId}/exams/${examId}/take`)
-    }
-  }
 
   return (
     <div className="container-page py-6 md:py-8 space-y-6">
@@ -118,7 +86,7 @@ export default async function CandidateExams({ params }: { params: Promise<{ org
                       Starts: {new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' }).format(new Date(exam.start_at))}
                     </div>
                   ) : (
-                    <form action={startExam}>
+                    <form action={startExamAction}>
                       <input type="hidden" name="exam_id" value={exam.id} />
                       <input type="hidden" name="org_id" value={org_id} />
                       <button className="w-full rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-strong transition">
