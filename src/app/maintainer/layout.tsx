@@ -32,9 +32,12 @@ export default async function MaintainerLayout({ children }: { children: React.R
 
   return (
     <div className="h-[100dvh] bg-bg text-text flex flex-col md:flex-row overflow-hidden">
-      <MaintainerSidebar signOutAction={handleSignOut} />
+      <MaintainerSidebar 
+        signOutAction={handleSignOut} 
+        profileHeader={<UserProfileHeader profile={userProfile} signOutAction={handleSignOut} />} 
+      />
       <main className="flex-1 overflow-auto flex flex-col">
-        <header className="sticky top-0 z-30 bg-bg/80 backdrop-blur-md px-6 py-3 border-b border-line flex items-center justify-end">
+        <header className="sticky top-0 z-30 bg-bg/80 backdrop-blur-md px-6 py-3 border-b border-line hidden md:flex items-center justify-end">
           <UserProfileHeader profile={userProfile} signOutAction={handleSignOut} />
         </header>
         <div className="flex-1">

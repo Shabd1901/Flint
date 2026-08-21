@@ -5,7 +5,13 @@ import { Sidebar } from './Sidebar'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 
-export function AdminSidebar({ signOutAction }: { signOutAction: () => Promise<void> }) {
+export function AdminSidebar({ 
+  signOutAction,
+  profileHeader
+}: { 
+  signOutAction: () => Promise<void>
+  profileHeader?: React.ReactNode
+}) {
   const pathname = usePathname()
   const match = pathname.match(/^\/admin\/orgs\/([^/]+)/)
   const orgId = match ? match[1] : null
@@ -49,6 +55,7 @@ export function AdminSidebar({ signOutAction }: { signOutAction: () => Promise<v
       navItems={navItems}
       handleSignOut={signOutAction}
       orgName={orgName}
+      profileHeader={profileHeader}
     />
   )
 }
