@@ -3,6 +3,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 import { createOrg } from './actions'
 import { AdminOrgCard } from './AdminOrgCard'
+import { CreateOrgForm } from './CreateOrgForm'
 
 export default async function AdminOrgs() {
   const supabase = await createClient()
@@ -82,15 +83,7 @@ export default async function AdminOrgs() {
           <h1 className="text-2xl font-semibold tracking-tight">My Classrooms</h1>
           <p className="mt-1 text-sm text-text-muted">Click on a classroom to manage exams, assignments, and contests.</p>
         </div>
-        <form action={createOrg} className="flex items-end gap-2">
-          <div>
-            <label className="block text-xs font-medium text-text-muted mb-1">New Classroom</label>
-            <input name="name" required className="h-10 w-56 rounded-md border bg-white px-3 text-sm outline-none ring-accent focus:ring-2" placeholder="e.g. Data Structures" />
-          </div>
-          <button className="h-10 rounded-md bg-accent px-5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-accent-strong">
-            + Create
-          </button>
-        </form>
+        <CreateOrgForm />
       </header>
 
       {finalOrgs && finalOrgs.length > 0 ? (
