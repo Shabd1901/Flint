@@ -21,12 +21,14 @@ export function Sidebar({
   navItems,
   handleSignOut,
   orgName,
+  profileHeader,
 }: {
   title: string
   role: string
   navItems: NavItem[]
   handleSignOut?: () => Promise<void>
   orgName?: string
+  profileHeader?: React.ReactNode
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -57,27 +59,34 @@ export function Sidebar({
 
   return (
     <>
-      <div className="sticky top-0 z-40 flex items-center justify-between border-b bg-surface p-4 md:hidden">
-        <div className="flex items-center gap-2">
-          <Image src="/flint-griffin-logo.svg" alt="Flint Logo" width={24} height={24} />
-          <div>
-            <p className="font-semibold tracking-tight">{title}</p>
-            <p className="text-xs uppercase tracking-[0.12em] text-text-muted">{role} portal</p>
+      <div className="sticky top-0 z-[100] flex items-center justify-between border-b bg-surface p-3 md:hidden">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsOpen((prev) => !prev)}
+            className="rounded-md border bg-white p-2 text-text-muted hover:text-text focus:outline-none focus:ring-2 focus:ring-accent"
+          >
+            {isOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+          <div className="flex items-center gap-2">
+            <Image src="/flint-griffin-logo.svg" alt="Flint Logo" width={24} height={24} className="hidden sm:block" />
+            <div>
+              <p className="font-bold tracking-tight text-text leading-tight">{title}</p>
+              <p className="text-[9px] uppercase tracking-[0.14em] text-text-muted font-bold">{role} portal</p>
+            </div>
           </div>
         </div>
-        <button
-          onClick={() => setIsOpen((prev) => !prev)}
-          className="rounded-md border bg-white p-2 text-text-muted hover:text-text"
-        >
-          {isOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+        
+        <div className="flex items-center gap-2 relative z-[110]">
+          {profileHeader}
+        </div>
       </div>
 
-      {isOpen && <div className="fixed inset-0 z-40 bg-black/25 md:hidden" onClick={() => setIsOpen(false)} />}
+      {isOpen && <div className="fixed inset-0 z-[998] bg-black/25 md:hidden" onClick={() => setIsOpen(false)} />}
 
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r bg-surface p-5 transition-transform duration-200 md:relative md:z-0 md:w-64
+          fixed inset-y-0 left-0 z-[999] flex w-72 flex-col border-r bg-surface p-5 transition-transform duration-200 md:relative md:z-0 md:w-64
           ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
