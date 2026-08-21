@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 export async function createAssignmentAction(orgId: string, formData: FormData) {
   const sb = await createClient()
   const { data: { user } } = await sb.auth.getUser()
-  if (!user) throw new Error('Not logged in')
+  if (!user) return { error: 'Not logged in' }
 
   const subTypesRaw = formData.getAll('submission_types').map(String)
   const submission_types = subTypesRaw.length > 0 ? subTypesRaw : ['file', 'link', 'text']
@@ -26,7 +26,9 @@ export async function createAssignmentAction(orgId: string, formData: FormData) 
 
   if (error) {
     console.error('[createAssignmentAction] Error inserting assignment:', error)
-    throw new Error(error.message)
+    return { error: error.message }
   }
+  
   revalidatePath(`/admin/orgs/${orgId}/assignments`)
+  return { success: true }
 }

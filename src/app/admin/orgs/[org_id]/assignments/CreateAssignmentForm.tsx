@@ -11,11 +11,15 @@ export function CreateAssignmentForm({ orgId }: { orgId: string }) {
   async function handleSubmit(formData: FormData) {
     startTransition(async () => {
       try {
-        await createAssignmentAction(orgId, formData)
-        formRef.current?.reset()
-        toast.success('Assignment published!')
+        const result = await createAssignmentAction(orgId, formData)
+        if (result?.error) {
+          toast.error(result.error)
+        } else if (result?.success) {
+          formRef.current?.reset()
+          toast.success('Assignment published!')
+        }
       } catch (e: any) {
-        toast.error(e.message || 'Failed to publish assignment')
+        toast.error('An unexpected error occurred')
       }
     })
   }
