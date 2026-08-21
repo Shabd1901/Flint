@@ -5,8 +5,11 @@ import { startContestAction } from './actions'
 import { toast } from 'react-hot-toast'
 import { Play } from 'lucide-react'
 
+import { useRouter } from 'next/navigation'
+
 export function StartContestButton({ orgId, contestId, label = 'Start Contest' }: { orgId: string, contestId: string, label?: string }) {
   const [isPending, startTransition] = useTransition()
+  const router = useRouter()
 
   function handleStart() {
     startTransition(async () => {
@@ -14,11 +17,11 @@ export function StartContestButton({ orgId, contestId, label = 'Start Contest' }
         const result = await startContestAction(orgId, contestId)
         if (result?.error) {
           toast.error(result.error)
+        } else if (result?.url) {
+          router.push(result.url)
         }
       } catch (err: any) {
-        if (err.message !== 'NEXT_REDIRECT') {
-          toast.error('An unexpected error occurred')
-        }
+        toast.error('An unexpected error occurred')
       }
     })
   }

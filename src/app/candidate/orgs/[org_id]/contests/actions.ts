@@ -20,7 +20,7 @@ export async function startContestAction(orgId: string, contestId: string) {
   const { data: existing } = await s.from('contest_attempts').select('id').eq('contest_id', contestId).eq('candidate_id', user.id).single()
   
   if (existing) {
-    redirect(`/candidate/orgs/${orgId}/contests/${contestId}/take`)
+    return { success: true, url: `/candidate/orgs/${orgId}/contests/${contestId}/take` }
   }
 
   // Create new attempt
@@ -34,7 +34,7 @@ export async function startContestAction(orgId: string, contestId: string) {
     return { error: 'Failed to start contest' }
   }
 
-  redirect(`/candidate/orgs/${orgId}/contests/${contestId}/take`)
+  return { success: true, url: `/candidate/orgs/${orgId}/contests/${contestId}/take` }
 }
 
 export async function submitContestAction(orgId: string, contestId: string) {
