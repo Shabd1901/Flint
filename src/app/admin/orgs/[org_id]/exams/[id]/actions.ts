@@ -9,12 +9,12 @@ export async function addQuestion(examId: string, orgId: string, formData: FormD
 
   const type = formData.get('type') as string
 
-  // Parse MCQ options
+  // Parse MCQ options (using ||| separator from new dynamic creator, fallback to comma)
   const optionsRaw = formData.get('options') as string
-  const options = optionsRaw ? optionsRaw.split(',').map(o => o.trim()).filter(Boolean) : []
+  const options = optionsRaw ? (optionsRaw.includes('|||') ? optionsRaw.split('|||') : optionsRaw.split(',')).map(o => o.trim()).filter(Boolean) : []
 
   const correctRaw = formData.get('correct_options') as string
-  const correct_options = correctRaw ? correctRaw.split(',').map(o => o.trim()).filter(Boolean) : []
+  const correct_options = correctRaw ? (correctRaw.includes('|||') ? correctRaw.split('|||') : correctRaw.split(',')).map(o => o.trim()).filter(Boolean) : []
 
   // Parse new formats
   const fileTypesRaw = formData.get('file_types') as string
@@ -43,10 +43,10 @@ export async function updateQuestion(questionId: string, examId: string, orgId: 
   const type = formData.get('type') as string
 
   const optionsRaw = formData.get('options') as string
-  const options = optionsRaw ? optionsRaw.split(',').map(o => o.trim()).filter(Boolean) : []
+  const options = optionsRaw ? (optionsRaw.includes('|||') ? optionsRaw.split('|||') : optionsRaw.split(',')).map(o => o.trim()).filter(Boolean) : []
 
   const correctRaw = formData.get('correct_options') as string
-  const correct_options = correctRaw ? correctRaw.split(',').map(o => o.trim()).filter(Boolean) : []
+  const correct_options = correctRaw ? (correctRaw.includes('|||') ? correctRaw.split('|||') : correctRaw.split(',')).map(o => o.trim()).filter(Boolean) : []
 
   const fileTypesRaw = formData.get('file_types') as string
   const file_types = fileTypesRaw ? fileTypesRaw.split(',').map(o => o.trim()).filter(Boolean) : []
