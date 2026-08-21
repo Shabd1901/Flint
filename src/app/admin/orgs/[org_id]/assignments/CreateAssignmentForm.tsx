@@ -2,6 +2,7 @@
 
 import { useRef, useTransition } from 'react'
 import { createAssignmentAction } from './actions'
+import { toast } from 'react-hot-toast'
 
 export function CreateAssignmentForm({ orgId }: { orgId: string }) {
   const formRef = useRef<HTMLFormElement>(null)
@@ -9,8 +10,13 @@ export function CreateAssignmentForm({ orgId }: { orgId: string }) {
 
   async function handleSubmit(formData: FormData) {
     startTransition(async () => {
-      await createAssignmentAction(orgId, formData)
-      formRef.current?.reset()
+      try {
+        await createAssignmentAction(orgId, formData)
+        formRef.current?.reset()
+        toast.success('Assignment published!')
+      } catch (e: any) {
+        toast.error(e.message || 'Failed to publish assignment')
+      }
     })
   }
 
