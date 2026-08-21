@@ -1,9 +1,11 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { Trash2, Pencil, X, Check, Plus } from 'lucide-react'
-import { addQuestion, updateQuestion, deleteQuestion } from './actions'
+import { useState, useTransition, useRef } from 'react'
+import { Trash2, Pencil, X, Check, Plus, Upload, Download } from 'lucide-react'
+import { addQuestion, updateQuestion, deleteQuestion, bulkAddQuestions } from './actions'
 import { ConfirmModal } from '@/components/ConfirmModal'
+import toast from 'react-hot-toast'
+import Papa from 'papaparse'
 
 function parseArray(val: any): string[] {
   if (!val) return []
@@ -61,7 +63,7 @@ function QuestionFormFields({ defaultValues }: { defaultValues?: Question }) {
 
   const initialOptions = parseArray(defaultValues?.options)
   const initialCorrect = parseArray(defaultValues?.correct_options)
-  
+
   const [options, setOptions] = useState(() => {
     if (defaultValues?.type === 'true_false') {
       return [
@@ -140,7 +142,7 @@ function QuestionFormFields({ defaultValues }: { defaultValues?: Question }) {
           <div className="space-y-2">
             {options.map((opt, i) => (
               <div key={opt.id} className="flex items-center gap-2">
-                <input 
+                <input
                   type="text"
                   value={opt.text}
                   onChange={e => setOptions(options.map(o => o.id === opt.id ? { ...o, text: e.target.value } : o))}
@@ -150,7 +152,7 @@ function QuestionFormFields({ defaultValues }: { defaultValues?: Question }) {
                   disabled={type === 'true_false'}
                 />
                 <label className="flex items-center gap-1.5 px-3 h-10 rounded-md border bg-white cursor-pointer hover:bg-surface transition shadow-sm">
-                  <input 
+                  <input
                     type={type === 'multi' ? 'checkbox' : 'radio'}
                     name={defaultValues?.id ? `correct_${type}_${defaultValues.id}` : `correct_${type}_new`}
                     checked={opt.isCorrect}
@@ -310,7 +312,78 @@ export function QuestionManager({ questions, examId, orgId }: { questions: Quest
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [showAddForm, setShowAddForm] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
   const [questionToDelete, setQuestionToDelete] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const parsedQuestions = results.data.map((row: any) => {
+          const type = row.Type?.trim().toLowerCase() || 'single'
+          const marks = Number(row.Marks) || 1
+
+          let options: string[] = []
+          if (type === 'true_false') {
+            options = ['True', 'False']
+          } else {
+            for (let i = 1; i <= 10; i++) {
+              if (row[`Option ${i}`]) {
+                options.push(row[`Option ${i}`].trim())
+              }
+            }
+            if (options.length === 0 && row.Options) {
+               options = row.Options.split(',').map((o: string) => o.trim())
+            }
+          }
+
+          let correct_options: string[] = []
+          const correctRaw = String(row['Correct Option(s)'] || row['Correct Options'] || row['Correct Answer'] || '').trim()
+
+          if (type === 'true_false') {
+             correct_options = [correctRaw.toLowerCase() === 'false' ? 'False' : 'True']
+          } else {
+            const rawParts = correctRaw.split(',').map(s => s.trim())
+            correct_options = rawParts.map(part => {
+               const idx = parseInt(part)
+               if (!isNaN(idx) && idx > 0 && idx <= options.length) {
+                 return options[idx - 1]
+               }
+               return part
+            }).filter(Boolean)
+          }
+
+          return {
+            text: row.Question?.trim(),
+            type,
+            marks,
+            options,
+            correct_options
+          }
+        }).filter(q => q.text)
+
+        if (parsedQuestions.length === 0) {
+          toast.error("No valid questions found in CSV")
+          return
+        }
+
+        startTransition(async () => {
+          try {
+            await bulkAddQuestions(examId, orgId, parsedQuestions)
+            toast.success(`Successfully imported ${parsedQuestions.length} questions!`)
+          } catch (e) {
+            toast.error("Failed to import questions")
+          }
+          if (fileInputRef.current) fileInputRef.current.value = ''
+        })
+      }
+    })
+  }
 
   function confirmDelete() {
     if (!questionToDelete) return
@@ -339,12 +412,29 @@ export function QuestionManager({ questions, examId, orgId }: { questions: Quest
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-text-muted">Questions ({questions?.length || 0})</h2>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-strong transition"
-        >
-          {showAddForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> Add Question</>}
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+             type="file"
+             accept=".csv"
+             ref={fileInputRef}
+             className="hidden"
+             onChange={handleFileUpload}
+          />
+          <button
+            onClick={() => setShowImportModal(true)}
+            disabled={isPending}
+            className="inline-flex items-center gap-1.5 rounded-md bg-surface-soft border border-line px-3 py-1.5 text-xs font-semibold text-text-muted hover:bg-surface hover:text-text transition disabled:opacity-50"
+            title="Import Questions from CSV"
+          >
+            <Download size={14} /> Import CSV
+          </button>
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-strong transition"
+          >
+            {showAddForm ? <><X size={14} /> Cancel</> : <><Plus size={14} /> Add Question</>}
+          </button>
+        </div>
       </div>
 
       {showAddForm && (
@@ -501,6 +591,59 @@ export function QuestionManager({ questions, examId, orgId }: { questions: Quest
         onConfirm={confirmDelete}
         onClose={() => setQuestionToDelete(null)}
       />
+
+      {showImportModal && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white w-full max-w-2xl p-6 rounded-xl shadow-xl relative max-h-[90vh] overflow-y-auto">
+            <button onClick={() => setShowImportModal(false)} className="absolute top-4 right-4 text-text-muted hover:text-text">
+              <X size={20} />
+            </button>
+            <h3 className="text-lg font-semibold mb-4 text-text">Import Questions from CSV</h3>
+            
+            <div className="space-y-4 text-sm text-text-muted">
+              <p>Upload a CSV file to bulk import multiple-choice, single-choice, and true/false questions.</p>
+              
+              <div className="bg-surface-soft p-4 rounded-lg border border-line">
+                <h4 className="font-semibold text-text mb-2">Required CSV Headers:</h4>
+                <code className="block bg-white p-2 rounded border text-xs overflow-x-auto whitespace-pre">
+                  Question,Type,Marks,Option 1,Option 2,Option 3,Option 4,Correct Option(s)
+                </code>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-text mb-1">Column Guide:</h4>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li><b>Question</b>: The text of your question.</li>
+                  <li><b>Type</b>: Use <code>single</code>, <code>multi</code>, or <code>true_false</code>.</li>
+                  <li><b>Marks</b>: Number of points (e.g., 1).</li>
+                  <li><b>Option 1-10</b>: The text for each option.</li>
+                  <li><b>Correct Option(s)</b>: You can provide the exact text OR the 1-based index (e.g., <code>1</code> for Option 1, or <code>"1, 3"</code> for Options 1 and 3).</li>
+                </ul>
+              </div>
+
+              <div className="bg-blue-50 text-blue-800 p-4 rounded-lg border border-blue-200">
+                <h4 className="font-semibold mb-1 flex items-center gap-1.5">Handling Commas in Text</h4>
+                <p>If your question or options contain commas (e.g., <code>London, UK</code>), simply wrap the entire cell in double quotes in your CSV editor (e.g., <code>"London, UK"</code>). Our robust CSV parser automatically handles standard quotes, ensuring your text isn't incorrectly split.</p>
+              </div>
+
+              <div className="pt-4 border-t flex justify-end gap-3 mt-6">
+                <a href="/demo_questions.csv" download className="px-4 py-2 text-sm font-medium border rounded-md hover:bg-surface-soft transition text-text">
+                  Download Demo CSV
+                </a>
+                <button
+                  onClick={() => {
+                    setShowImportModal(false)
+                    fileInputRef.current?.click()
+                  }}
+                  className="px-4 py-2 bg-accent text-white text-sm font-semibold rounded-md hover:bg-accent-strong transition"
+                >
+                  Choose CSV File to Upload
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

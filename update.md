@@ -10,3 +10,6 @@ This file tracks all major and minor changes made to the project.
 - "style: refactor mobile header to include user profile directly on the top navbar"
 - "fix: resolve mobile sidebar not expanding due to z-index and button type issues"
 - "feat: implement dynamic multiple-choice option creator for questions with robust delimiter support"
+- "chore: merge from dev branch to sync remote changes"
+- "fix: add missing Upload icon import to results page"
+- "feat: add instructional modal and downloadable demo template for CSV imports"

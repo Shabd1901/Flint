@@ -76,7 +76,7 @@ export function Sidebar({
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2 relative z-[110]">
           {profileHeader}
         </div>
@@ -108,8 +108,8 @@ export function Sidebar({
         <nav className={`space-y-1.5 ${orgName ? 'mt-4' : 'mt-6'}`}>
           {navItems.map((item) => {
             const Icon = item.icon
-            const isActive = item.exact 
-              ? pathname === item.href 
+            const isActive = item.exact
+              ? pathname === item.href
               : pathname === item.href || (pathname.startsWith(item.href + '/') && item.href !== '/')
             return (
               <Link
@@ -133,10 +133,6 @@ export function Sidebar({
             )
           })}
         </nav>
-
-        <div className="mt-6 rounded-lg border bg-surface-soft p-3 text-xs text-text-muted">
-          Session actions and role navigation are available here.
-        </div>
 
         <div className="mt-auto pt-6">
           <form onSubmit={onSignOutSubmit}>

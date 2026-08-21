@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { Download, CheckCircle2, XCircle, Eye, EyeOff, ArrowLeft, ShieldAlert } from 'lucide-react'
+import { Download, CheckCircle2, XCircle, Eye, EyeOff, ArrowLeft, ShieldAlert, Upload } from 'lucide-react'
 import { formatDateTime } from '@/utils/formatDate'
 import { QuestionManager } from './QuestionManager'
 import { ExamSettingsEditor } from './ExamSettingsEditor'
@@ -37,7 +37,7 @@ export default async function ExamDetails({ params }: { params: Promise<{ org_id
   const { org_id, id } = await params
   const supabase = await createClient()
   const adminClient = createAdminClient()
-  
+
   const { data: exam } = await supabase.from('exams').select('*').eq('id', id).single()
   const { data: questions } = await supabase.from('questions').select('*').eq('exam_id', id).order('created_at', { ascending: true })
   const { data: attempts } = await adminClient.from('exam_attempts').select('*, profiles(name, email), violation_events(*)').eq('exam_id', id).order('started_at', { ascending: false })
@@ -78,7 +78,7 @@ export default async function ExamDetails({ params }: { params: Promise<{ org_id
             )}
           </div>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-3">
           {/* Result Release Toggle */}
           <AutoReleaseToggle examId={id} orgId={org_id} initialValue={exam?.auto_release_results ?? true} />
@@ -88,7 +88,7 @@ export default async function ExamDetails({ params }: { params: Promise<{ org_id
             href={`/api/admin/exams/${id}/export`}
             className="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-strong transition"
           >
-            <Download size={16} />
+            <Upload size={16} />
             Export CSV
           </a>
 
@@ -144,11 +144,10 @@ export default async function ExamDetails({ params }: { params: Promise<{ org_id
                             </div>
 
                             <div>
-                              <span className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wider ${
-                                attempt.status === 'submitted' ? 'bg-emerald-100 text-emerald-700' :
-                                attempt.status === 'in_progress' ? 'bg-amber-100 text-amber-800' :
-                                'bg-surface-soft text-text-muted'
-                              }`}>
+                              <span className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wider ${attempt.status === 'submitted' ? 'bg-emerald-100 text-emerald-700' :
+                                  attempt.status === 'in_progress' ? 'bg-amber-100 text-amber-800' :
+                                    'bg-surface-soft text-text-muted'
+                                }`}>
                                 {attempt.status}
                               </span>
                               {attempt.score !== null && <div className="mt-1 font-mono font-bold text-accent">Score: {attempt.score}</div>}

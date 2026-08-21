@@ -139,3 +139,24 @@ export async function deleteExamFromDetail(examId: string, orgId: string) {
   revalidatePath(`/admin/orgs/${orgId}/exams`)
   redirect(`/admin/orgs/${orgId}/exams`)
 }
+
+export async function bulkAddQuestions(examId: string, orgId: string, questions: any[]) {
+  const s = await createClient()
+  
+  const payload = questions.map(q => ({
+    exam_id: examId,
+    text: q.text,
+    type: q.type,
+    marks: q.marks || 1,
+    options: q.options || [],
+    correct_options: q.correct_options || [],
+    correct_text: q.correct_text || null,
+    correct_number: q.correct_number || null,
+    tolerance: q.tolerance || null,
+    max_words: q.max_words || null,
+    file_types: q.file_types || null
+  }))
+
+  await s.from('questions').insert(payload)
+  revalidatePath(`/admin/orgs/${orgId}/exams/${examId}`)
+}

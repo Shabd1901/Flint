@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { Download, Trophy, Clock, Code2, ArrowLeft } from 'lucide-react'
+import { Download, Trophy, Clock, Code2, ArrowLeft, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { TbdNotice } from '@/components/TbdNotice'
 
@@ -108,7 +108,7 @@ export default async function ContestResults({ params }: { params: Promise<{ org
 
         <div className="flex items-center gap-3">
           <a href={`/api/admin/contests/${id}/export`} className="btn-secondary flex items-center gap-2">
-            <Download size={16} />
+            <Upload size={16} />
             Export CSV
           </a>
         </div>
