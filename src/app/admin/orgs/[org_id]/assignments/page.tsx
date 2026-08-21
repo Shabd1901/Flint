@@ -1,6 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
-import { revalidatePath } from 'next/cache'
 import { formatDateTime } from '@/utils/formatDate'
+import { createAssignmentAction } from './actions'
 
 export default async function AdminAssignments({ params }: { params: Promise<{ org_id: string }> }) {
   const { org_id } = await params
@@ -9,29 +9,7 @@ export default async function AdminAssignments({ params }: { params: Promise<{ o
   
   const { data: assignments } = await supabase.from('assignments').select('*').eq('org_id', org_id).order('created_at', { ascending: false })
 
-  async function createAssignment(formData: FormData) {
-    'use server'
-    const sb = await createClient()
-    const { data: { user } } = await sb.auth.getUser()
-    if (!user) return
-
-    const subTypesRaw = formData.getAll('submission_types').map(String)
-    const submission_types = subTypesRaw.length > 0 ? subTypesRaw : ['file', 'link', 'text']
-
-    const allowedTypesRaw = formData.getAll('allowed_file_types').map(String)
-    const allowed_file_types = allowedTypesRaw.length > 0 ? allowedTypesRaw : ['pdf', 'csv', 'doc', 'md', 'xlsx']
-
-    await sb.from('assignments').insert({
-      org_id: org_id,
-      title: formData.get('title'),
-      instructions: formData.get('instructions'),
-      due_at: formData.get('due_at'),
-      max_score: Number(formData.get('max_score')),
-      submission_types,
-      allowed_file_types
-    })
-    revalidatePath(`/admin/orgs/${org_id}/assignments`)
-  }
+  const createAssignment = createAssignmentAction.bind(null, org_id)
 
   return (
     <div className="container-page py-6 md:py-8 space-y-6">
