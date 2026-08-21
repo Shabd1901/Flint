@@ -15,3 +15,4 @@ This file tracks all major and minor changes made to the project.
 - "feat: add instructional modal and downloadable demo template for CSV imports"
 - "feat: implement bulk roster uploads via CSV leveraging Supabase Admin API"
 - "feat: overhaul contest structure to HackerRank style and integrate in-browser Pyodide execution engine"
+- "chore: update global logo and favicon to new obsidian arrowhead branding"
