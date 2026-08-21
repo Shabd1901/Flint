@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import Link from 'next/link'
 import { ChevronRight, Building } from 'lucide-react'
+import { AlertPopup } from './AlertPopup'
 
 export default async function CandidateDashboard({
   searchParams,
@@ -105,7 +106,7 @@ export default async function CandidateDashboard({
       .single()
 
     if (existing) {
-      redirect(`/candidate?info=You are already enrolled in "${org.name}".`)
+      redirect(`/candidate?info=You are already part of the organization "${org.name}".`)
     }
 
     // Perform enrollment
@@ -124,21 +125,11 @@ export default async function CandidateDashboard({
 
   return (
     <div className="container-page py-6 md:py-8 space-y-6">
-      {resolvedParams.error && (
-        <div className="rounded-md bg-red-50 p-4 text-sm font-medium text-red-800 border border-red-200">
-          {resolvedParams.error}
-        </div>
-      )}
-      {resolvedParams.success && (
-        <div className="rounded-md bg-emerald-50 p-4 text-sm font-medium text-emerald-800 border border-emerald-200">
-          {resolvedParams.success}
-        </div>
-      )}
-      {resolvedParams.info && (
-        <div className="rounded-md bg-blue-50 p-4 text-sm font-medium text-blue-800 border border-blue-200">
-          {resolvedParams.info}
-        </div>
-      )}
+      <AlertPopup 
+        error={resolvedParams.error} 
+        success={resolvedParams.success} 
+        info={resolvedParams.info} 
+      />
 
       <header className="surface-card p-5">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">Candidate dashboard</p>
