@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { LayoutDashboard, Code, BookOpen, Terminal, ArrowLeft } from 'lucide-react'
+import { LayoutDashboard, Code, BookOpen, Terminal, ArrowLeft, Trophy } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
@@ -39,6 +39,7 @@ export function CandidateSidebar({
       { label: 'My Exams', href: `/candidate/orgs/${orgId}/exams`, icon: BookOpen },
       { label: 'My Assignments', href: `/candidate/orgs/${orgId}/assignments`, icon: Code },
       { label: 'Coding Contests', href: `/candidate/orgs/${orgId}/contests`, icon: Terminal },
+      { label: 'Hackathons', href: `/candidate/orgs/${orgId}/hackathons`, icon: Trophy },
     ]
   } else {
     navItems = [

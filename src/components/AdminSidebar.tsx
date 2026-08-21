@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { LayoutDashboard, CheckSquare, FileText, Code2, Building, ArrowLeft, Users } from 'lucide-react'
+import { LayoutDashboard, CheckSquare, FileText, Code2, Building, ArrowLeft, Users, Trophy } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
@@ -39,8 +39,9 @@ export function AdminSidebar({
       { label: 'Classroom', href: `/admin/orgs/${orgId}`, icon: LayoutDashboard, exact: true },
       { label: 'Exams', href: `/admin/orgs/${orgId}/exams`, icon: FileText },
       { label: 'Assignments', href: `/admin/orgs/${orgId}/assignments`, icon: CheckSquare },
-      { label: 'People', href: `/admin/orgs/${orgId}/people`, icon: Users },
       { label: 'Coding Contests', href: `/admin/orgs/${orgId}/contests`, icon: Code2 },
+      { label: 'Hackathons', href: `/admin/orgs/${orgId}/hackathons`, icon: Trophy },
+      { label: 'People', href: `/admin/orgs/${orgId}/people`, icon: Users },
     ]
   } else {
     navItems = [
