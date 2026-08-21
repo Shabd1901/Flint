@@ -39,11 +39,6 @@ export function UserProfileHeader({
     setTpUidVal(profile.tp_uid || '')
   }, [profile])
 
-  // Hide completely on exam take page to avoid proctoring distractions
-  if (pathname.includes('/take')) {
-    return null
-  }
-
   // Close dropdown on click outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -57,6 +52,11 @@ export function UserProfileHeader({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Hide completely on exam take page to avoid proctoring distractions
+  if (pathname.includes('/take')) {
+    return null
+  }
 
   // Helper to generate initials (e.g. Raunak Nayak -> RN)
   const getInitials = (name: string) => {

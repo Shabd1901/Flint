@@ -33,11 +33,9 @@ export default async function MaintainerDashboard({ searchParams }: { searchPara
 
   const { data: exams } = await supabase.from('exams').select('id, title, status, orgs(name)')
   const { data: allProfiles } = await supabase.from('profiles').select('id, name, email, role').order('created_at', { ascending: false })
-  const { data: violations } = await supabase
+  const { count: violationsCount } = await supabase
     .from('violation_events')
-    .select('id, type, occurred_at, exam_attempts(profiles(name), exams(title))')
-    .order('occurred_at', { ascending: false })
-    .limit(10)
+    .select('id', { count: 'exact', head: true })
 
   const usersList: UserProfile[] = (allProfiles || []).map(p => ({
     id: p.id,
@@ -103,7 +101,7 @@ export default async function MaintainerDashboard({ searchParams }: { searchPara
         </article>
         <article className="surface-card hover-lift p-5">
           <p className="text-sm text-text-muted">Integrity events</p>
-          <p className="mt-2 font-mono text-3xl font-semibold text-danger">{violations?.length || 0}</p>
+          <p className="mt-2 font-mono text-3xl font-semibold text-danger">{violationsCount || 0}</p>
         </article>
       </section>
 
@@ -194,39 +192,6 @@ export default async function MaintainerDashboard({ searchParams }: { searchPara
               </div>
             </div>
           )}
-        </div>
-      </section>
-
-      <section className="mt-4 surface-card p-5">
-        <h2 className="text-lg font-semibold">Recent violations</h2>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b text-text-muted">
-                <th className="py-2">Candidate</th>
-                <th className="py-2">Exam</th>
-                <th className="py-2">Violation type</th>
-                <th className="py-2">Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {violations?.slice(0, 10).map((v: any) => (
-                <tr key={v.id} className="border-b hover:bg-surface-soft/70">
-                  <td className="py-2">{v.exam_attempts?.profiles?.name}</td>
-                  <td className="py-2 text-text-muted">{v.exam_attempts?.exams?.title}</td>
-                  <td className="py-2">
-                    <span className="rounded bg-rose-100 px-2 py-1 text-xs font-semibold text-rose-700">{v.type}</span>
-                  </td>
-                  <td className="py-2 text-text-muted" suppressHydrationWarning>{formatDateTime(v.occurred_at)}</td>
-                </tr>
-              ))}
-              {(!violations || violations.length === 0) && (
-                <tr>
-                  <td colSpan={4} className="py-6 text-center text-text-muted">No violations recorded yet.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
         </div>
       </section>
     </div>
