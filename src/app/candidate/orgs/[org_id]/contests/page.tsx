@@ -1,8 +1,9 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
-import { TbdNotice } from '@/components/TbdNotice'
+import { ArrowLeft, Clock, Calendar } from 'lucide-react'
+import { formatDateTime } from '@/utils/formatDate'
+import { StartContestButton } from './StartContestButton'
 
 export default async function CandidateContests({ params }: { params: Promise<{ org_id: string }> }) {
   const { org_id } = await params
@@ -21,39 +22,75 @@ export default async function CandidateContests({ params }: { params: Promise<{ 
   const { data: attempts } = await supabase.from('contest_attempts').select('*').eq('candidate_id', user.id)
   const attemptMap = new Map(attempts?.map(a => [a.contest_id, a]))
 
-  async function startContest(formData: FormData) {
-    'use server'
-    const s = await createClient()
-    const { data: { user } } = await s.auth.getUser()
-
-    const contestId = formData.get('contest_id') as string
-
-    // Validate start_at & end_at window
-    const { data: c } = await s.from('contests').select('start_at, end_at, status').eq('id', contestId).single()
-    if (!c || c.status !== 'live') return
-
-    const now = new Date()
-    if (c.start_at && now < new Date(c.start_at)) return
-    if (c.end_at && now > new Date(c.end_at)) return
-
-    // Create attempt
-    const { data: attempt, error } = await s.from('contest_attempts').insert({
-      contest_id: contestId,
-      candidate_id: user!.id,
-      status: 'in_progress'
-    }).select().single()
-
-    if (!error && attempt) {
-      redirect(`/candidate/orgs/${org_id}/contests/${contestId}/take`)
-    }
-  }
-
   return (
-    <TbdNotice
-      title="Candidate Coding Contests"
-      description="Coding Contests are scheduled for launch in Version 2. All contest participation systems, time window validators, and workspace triggers have been safely preserved."
-      backHref="/candidate"
-      backLabel="Back to Home"
-    />
+    <div className="container-page py-6 md:py-8 space-y-6">
+      <div className="flex items-center gap-4">
+        <Link href={`/candidate/orgs/${org_id}`} className="p-2 hover:bg-surface-hover rounded-full transition-colors text-text-muted hover:text-text">
+          <ArrowLeft size={20} />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Coding Contests</h1>
+          <p className="text-sm text-text-muted mt-1">Participate in live algorithmic programming challenges.</p>
+        </div>
+      </div>
+
+      {contests?.length === 0 ? (
+        <div className="p-12 border border-line border-dashed rounded-xl flex flex-col items-center justify-center text-center">
+          <div className="w-12 h-12 bg-surface-soft rounded-full flex items-center justify-center mb-4">
+            <Clock className="text-text-muted" size={24} />
+          </div>
+          <h2 className="text-lg font-semibold text-text mb-1">No Active Contests</h2>
+          <p className="text-text-muted max-w-sm">
+            There are currently no live coding contests available for this classroom. Check back later!
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {contests?.map((c) => {
+            const attempt = attemptMap.get(c.id)
+            const isCompleted = attempt && attempt.status !== 'in_progress'
+            const isStarted = attempt && attempt.status === 'in_progress'
+
+            return (
+              <div key={c.id} className="surface-card p-6 flex flex-col h-full hover-lift">
+                <div className="flex-1">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-bold text-lg text-text leading-tight">{c.title}</h3>
+                    {isCompleted ? (
+                      <span className="text-[10px] font-bold px-2 py-1 bg-emerald-100 text-emerald-800 rounded-md uppercase tracking-wider">Completed</span>
+                    ) : isStarted ? (
+                      <span className="text-[10px] font-bold px-2 py-1 bg-amber-100 text-amber-800 rounded-md uppercase tracking-wider">In Progress</span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-2 py-1 bg-blue-100 text-blue-800 rounded-md uppercase tracking-wider">Live Now</span>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2 mt-4">
+                    <div className="flex items-center gap-2 text-sm text-text-muted">
+                      <Clock size={16} />
+                      <span>{c.duration_minutes} minutes</span>
+                    </div>
+                    {c.start_at && (
+                      <div className="flex items-center gap-2 text-sm text-text-muted" suppressHydrationWarning>
+                        <Calendar size={16} />
+                        <span>Ends: {formatDateTime(c.end_at || c.start_at)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-5 border-t border-line flex justify-end">
+                  {isCompleted ? (
+                    <button disabled className="btn-secondary opacity-50 cursor-not-allowed">Submitted</button>
+                  ) : (
+                    <StartContestButton orgId={org_id} contestId={c.id} label={isStarted ? 'Resume Contest' : 'Start Contest'} />
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }

@@ -40,7 +40,7 @@ export function AdminSidebar({
       { label: 'Exams', href: `/admin/orgs/${orgId}/exams`, icon: FileText },
       { label: 'Assignments', href: `/admin/orgs/${orgId}/assignments`, icon: CheckSquare },
       { label: 'People', href: `/admin/orgs/${orgId}/people`, icon: Users },
-      { label: 'Coding Contests', href: `/admin/orgs/${orgId}/contests`, icon: Code2, badge: 'TBD' },
+      { label: 'Coding Contests', href: `/admin/orgs/${orgId}/contests`, icon: Code2 },
     ]
   } else {
     navItems = [
