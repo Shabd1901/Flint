@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { register } from './actions'
 import { User, Mail, IdCard, Lock } from 'lucide-react'
+import { SubmitButton } from '@/components/SubmitButton'
 
 export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const resolvedParams = await searchParams
@@ -49,7 +50,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
               </div>
             )}
 
-            <form className="space-y-4">
+            <form action={register} className="space-y-4">
               <label className="grid gap-1 text-xs font-semibold text-text-muted">
                 <span>Full Name</span>
                 <div className="relative">
@@ -107,12 +108,11 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
                 </div>
               </label>
 
-              <button
-                formAction={register}
+              <SubmitButton
                 className="w-full rounded-lg bg-accent px-4 py-2.5 text-xs font-bold text-white transition hover:-translate-y-0.5 hover:bg-accent-strong shadow-md"
               >
                 Create Candidate Account
-              </button>
+              </SubmitButton>
             </form>
           </section>
         </div>

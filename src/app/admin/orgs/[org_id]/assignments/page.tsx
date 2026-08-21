@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { formatDateTime } from '@/utils/formatDate'
+import { SubmitButton } from '@/components/SubmitButton'
 
 export default async function AdminAssignments({ params }: { params: Promise<{ org_id: string }> }) {
   const { org_id } = await params
@@ -144,9 +145,9 @@ export default async function AdminAssignments({ params }: { params: Promise<{ o
               <input type="number" name="max_score" required min="1" max="100" defaultValue="100" className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm" />
             </div>
 
-            <button className="w-full rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-accent-strong mt-4">
+            <SubmitButton loadingText="Publishing...">
               Publish Assignment
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </div>

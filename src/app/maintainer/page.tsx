@@ -4,6 +4,7 @@ import { formatDate, formatDateTime } from '@/utils/formatDate'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { UserManagementList, UserProfile } from './UserManagementList'
 import { DeleteOrgButton } from './DeleteOrgButton'
+import { SubmitButton } from '@/components/SubmitButton'
 
 export default async function MaintainerDashboard({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const { page } = await searchParams
@@ -123,7 +124,12 @@ export default async function MaintainerDashboard({ searchParams }: { searchPara
             <span className="text-text-muted">Password</span>
             <input name="password" type="password" required minLength={6} className="h-9 w-40 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm" placeholder="••••••••" />
           </label>
-          <button className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-white hover:bg-accent-strong transition">Create Admin</button>
+          <SubmitButton 
+            loadingText="Creating..." 
+            className="h-9 rounded-md bg-accent px-4 text-sm font-medium text-white hover:bg-accent-strong transition"
+          >
+            Create Admin
+          </SubmitButton>
         </form>
       </section>
 
