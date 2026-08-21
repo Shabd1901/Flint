@@ -34,7 +34,7 @@ interface Question {
 }
 
 const TYPE_LABELS: Record<string, string> = {
-  single: 'Single Choice (MCQ)',
+  single: 'Single Choice (SCQ)',
   multi: 'Multiple Choice (MCQ)',
   true_false: 'True / False',
   short_answer: 'Short Answer (Text)',
@@ -64,9 +64,9 @@ function QuestionFormFields({ defaultValues }: { defaultValues?: Question }) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-text-muted mb-1">Type</label>
-          <select 
-            name="type" 
-            value={type} 
+          <select
+            name="type"
+            value={type}
             onChange={e => setType(e.target.value)}
             className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm"
           >
@@ -341,7 +341,7 @@ export function QuestionManager({ questions, examId, orgId }: { questions: Quest
                 <span className="font-bold text-text-muted">{i + 1}.</span>
                 <div className="space-y-3 flex-1">
                   <p className="font-medium">{q.text}</p>
-                  
+
                   {(q.type === 'single' || q.type === 'multi' || q.type === 'true_false') && (
                     <ul className="space-y-1">
                       {(q.type === 'true_false' ? ['True', 'False'] : opts).map((opt, idx) => (
@@ -379,7 +379,7 @@ export function QuestionManager({ questions, examId, orgId }: { questions: Quest
                     </div>
                   )}
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   <span className="text-xs uppercase bg-surface-soft text-text-muted px-2 py-1 rounded-md">{TYPE_LABELS[q.type] || q.type}</span>
                   <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-md font-semibold">{q.marks} mark{q.marks !== 1 ? 's' : ''}</span>
