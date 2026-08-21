@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
-import { runCodeOnJudge0, ExecutionResult } from '@/utils/judge0'
+import { runCode, ExecutionResult } from '@/utils/compiler'
 
 export async function runSampleCode(
   problemId: string,
@@ -20,7 +20,7 @@ export async function runSampleCode(
   const results: ExecutionResult[] = []
 
   for (const tc of (testCases || [])) {
-    const execResult = await runCodeOnJudge0(language, sourceCode, {
+    const execResult = await runCode(language, sourceCode, {
       input: tc.input,
       expected_output: tc.expected_output,
       is_sample: true,
@@ -59,7 +59,7 @@ export async function submitFullSolution(
   const results: ExecutionResult[] = []
 
   for (const tc of (testCases || [])) {
-    const execResult = await runCodeOnJudge0(language, sourceCode, {
+    const execResult = await runCode(language, sourceCode, {
       input: tc.input,
       expected_output: tc.expected_output,
       is_sample: tc.is_sample,
