@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     name: profile?.name || user.user_metadata?.name || user.email?.split('@')[0] || 'Admin',
     email: profile?.email || user.email || '',
     role: profile?.role || 'admin',
-    tp_uid: profile?.tp_uid || user.user_metadata?.tp_uid || null
+    tp_uid: user.user_metadata?.tp_uid || null
   }
 
   async function handleSignOut() {
