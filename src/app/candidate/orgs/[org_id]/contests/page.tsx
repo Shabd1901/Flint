@@ -51,6 +51,10 @@ export default async function CandidateContests({ params }: { params: Promise<{ 
             const isCompleted = attempt && attempt.status !== 'in_progress'
             const isStarted = attempt && attempt.status === 'in_progress'
 
+            const now = new Date()
+            const isUpcoming = c.start_at ? now < new Date(c.start_at) : false
+            const hasEnded = c.end_at ? now > new Date(c.end_at) : false
+
             return (
               <div key={c.id} className="surface-card p-6 flex flex-col h-full hover-lift">
                 <div className="flex-1">
@@ -60,6 +64,10 @@ export default async function CandidateContests({ params }: { params: Promise<{ 
                       <span className="text-[10px] font-bold px-2 py-1 bg-emerald-100 text-emerald-800 rounded-md uppercase tracking-wider">Completed</span>
                     ) : isStarted ? (
                       <span className="text-[10px] font-bold px-2 py-1 bg-amber-100 text-amber-800 rounded-md uppercase tracking-wider">In Progress</span>
+                    ) : hasEnded ? (
+                      <span className="text-[10px] font-bold px-2 py-1 bg-red-100 text-red-800 rounded-md uppercase tracking-wider">Ended</span>
+                    ) : isUpcoming ? (
+                      <span className="text-[10px] font-bold px-2 py-1 bg-slate-100 text-slate-800 rounded-md uppercase tracking-wider">Upcoming</span>
                     ) : (
                       <span className="text-[10px] font-bold px-2 py-1 bg-blue-100 text-blue-800 rounded-md uppercase tracking-wider">Live Now</span>
                     )}
@@ -73,7 +81,7 @@ export default async function CandidateContests({ params }: { params: Promise<{ 
                     {c.start_at && (
                       <div className="flex items-center gap-2 text-sm text-text-muted" suppressHydrationWarning>
                         <Calendar size={16} />
-                        <span>Ends: {formatDateTime(c.end_at || c.start_at)}</span>
+                        <span>Starts: {formatDateTime(c.start_at)}</span>
                       </div>
                     )}
                   </div>
@@ -82,8 +90,10 @@ export default async function CandidateContests({ params }: { params: Promise<{ 
                 <div className="mt-6 pt-5 border-t border-line flex justify-end">
                   {isCompleted ? (
                     <button disabled className="btn-secondary opacity-50 cursor-not-allowed">Submitted</button>
+                  ) : hasEnded ? (
+                    <button disabled className="btn-secondary opacity-50 cursor-not-allowed">Ended</button>
                   ) : (
-                    <StartContestButton orgId={org_id} contestId={c.id} label={isStarted ? 'Resume Contest' : 'Start Contest'} />
+                    <StartContestButton orgId={org_id} contestId={c.id} label={isUpcoming ? 'Starts soon' : isStarted ? 'Resume Contest' : 'Start Contest'} disabled={isUpcoming} />
                   )}
                 </div>
               </div>

@@ -7,7 +7,7 @@ import { Play } from 'lucide-react'
 
 import { useRouter } from 'next/navigation'
 
-export function StartContestButton({ orgId, contestId, label = 'Start Contest' }: { orgId: string, contestId: string, label?: string }) {
+export function StartContestButton({ orgId, contestId, label = 'Start Contest', disabled = false }: { orgId: string, contestId: string, label?: string, disabled?: boolean }) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
@@ -29,7 +29,7 @@ export function StartContestButton({ orgId, contestId, label = 'Start Contest' }
   return (
     <button 
       onClick={handleStart}
-      disabled={isPending} 
+      disabled={isPending || disabled} 
       className="btn-primary flex items-center gap-2 whitespace-nowrap disabled:opacity-70 disabled:cursor-not-allowed"
     >
       {isPending ? (
