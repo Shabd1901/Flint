@@ -13,3 +13,4 @@ This file tracks all major and minor changes made to the project.
 - "chore: merge from dev branch to sync remote changes"
 - "fix: add missing Upload icon import to results page"
 - "feat: add instructional modal and downloadable demo template for CSV imports"
+- "feat: implement bulk roster uploads via CSV leveraging Supabase Admin API"

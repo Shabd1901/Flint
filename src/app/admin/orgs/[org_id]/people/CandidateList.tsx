@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { Search, UserX, Copy, Check, Shield, GraduationCap, RefreshCw, X, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useState, useTransition, useRef } from 'react'
+import { Search, UserX, Copy, Check, Shield, GraduationCap, RefreshCw, X, AlertTriangle, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
 import { formatDate } from '@/utils/formatDate'
-import { removeCandidateAction } from './actions'
+import { removeCandidateAction, bulkUploadRosterAction } from './actions'
+import Papa from 'papaparse'
 
 import { ConfirmModal } from '@/components/ConfirmModal'
 
@@ -40,6 +41,40 @@ export function CandidateList({
   const [removingCandidate, setRemovingCandidate] = useState<{ id: string; name: string } | null>(null)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
   const [isPending, startTransition] = useTransition()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleRosterUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const parsed = results.data.map((row: any) => ({
+          name: (row.Name || row.name || '').trim(),
+          email: (row.Email || row.email || '').trim()
+        })).filter(c => c.email)
+
+        if (parsed.length === 0) {
+          setFeedback({ type: 'error', msg: "No valid emails found in CSV" })
+          return
+        }
+
+        setFeedback({ type: 'success', msg: `Processing ${parsed.length} candidates... This may take a minute.` })
+        
+        startTransition(async () => {
+          const res = await bulkUploadRosterAction(orgId, parsed)
+          if (res.error) {
+            setFeedback({ type: 'error', msg: res.error })
+          } else {
+            setFeedback({ type: 'success', msg: res.success || 'Roster imported successfully!' })
+          }
+          if (fileInputRef.current) fileInputRef.current.value = ''
+        })
+      }
+    })
+  }
 
   const pageSize = 10
 
@@ -94,7 +129,7 @@ export function CandidateList({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0 mt-4 sm:mt-0">
           <span className="text-xs text-text-muted font-medium">Invite Code:</span>
           <code className="bg-surface-soft px-2.5 py-1 rounded font-mono font-bold text-accent text-sm border">
             {inviteCode}
@@ -104,7 +139,26 @@ export function CandidateList({
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-accent text-white text-xs font-semibold hover:bg-accent-strong transition"
           >
             {copied ? <Check size={14} /> : <Copy size={14} />}
-            {copied ? 'Copied!' : 'Copy Code'}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+          
+          <div className="w-px h-5 bg-line mx-1 hidden sm:block"></div>
+          
+          <input 
+             type="file" 
+             accept=".csv" 
+             ref={fileInputRef} 
+             className="hidden" 
+             onChange={handleRosterUpload}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isPending}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-surface border border-line text-text-muted text-xs font-semibold hover:bg-surface-hover hover:text-text transition disabled:opacity-50"
+            title="CSV Format: Name, Email"
+          >
+            <Upload size={14} />
+            Bulk CSV Upload
           </button>
         </div>
       </div>
