@@ -69,7 +69,7 @@ export function Sidebar({
             {isOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Flint Logo" width={24} height={24} className="hidden sm:block" />
+            <Image src="/logo.jpeg" alt="Flint Logo" width={24} height={24} className="hidden sm:block" />
             <div>
               <p className="font-bold tracking-tight text-text leading-tight">{title}</p>
               <p className="text-[9px] uppercase tracking-[0.14em] text-text-muted font-bold">{role} portal</p>
@@ -91,7 +91,7 @@ export function Sidebar({
         `}
       >
         <div className="flex items-center gap-3">
-          <Image src="/logo.png" alt="Flint Logo" width={32} height={32} />
+          <Image src="/logo.jpeg" alt="Flint Logo" width={32} height={32} />
           <div>
             <p className="text-xl font-semibold tracking-tight">{title}</p>
             <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-text-muted">{role} portal</p>

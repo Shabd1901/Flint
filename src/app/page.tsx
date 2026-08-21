@@ -30,7 +30,7 @@ export default async function Page() {
       <header className="border-b bg-surface">
         <div className="container-page flex h-16 items-center justify-between">
           <div className="flex items-center gap-2 font-semibold tracking-tight">
-            <Image src="/logo.png" alt="Flint Logo" width={32} height={32} />
+            <Image src="/logo.jpeg" alt="Flint Logo" width={32} height={32} />
             Flint
           </div>
           <nav className="hidden items-center gap-5 text-sm text-text-muted md:flex">
