@@ -6,4 +6,7 @@ This file tracks all major and minor changes made to the project.
 - "feat: add loaders and idempotency to assignment, registration, and maintainer forms"
 - "chore: configure upstream tracking to origin main"
 - "feat: display current classroom name in admin and candidate sidebars"
+<<<<<<< HEAD
 - "chore: pull and merge changes from dev branch"
+=======
+>>>>>>> dev/main
