@@ -59,6 +59,29 @@ function QuestionFormFields({ defaultValues }: { defaultValues?: Question }) {
   const [type, setType] = useState(defaultValues?.type || 'single')
   const hint = TYPE_HINTS[type]
 
+  const initialOptions = parseArray(defaultValues?.options)
+  const initialCorrect = parseArray(defaultValues?.correct_options)
+  
+  const [options, setOptions] = useState(() => {
+    if (defaultValues?.type === 'true_false') {
+      return [
+        { id: Math.random().toString(), text: 'True', isCorrect: initialCorrect.includes('True') },
+        { id: Math.random().toString(), text: 'False', isCorrect: initialCorrect.includes('False') || !initialCorrect.includes('True') }
+      ]
+    }
+    if (initialOptions.length > 0) {
+      return initialOptions.map(opt => ({
+        id: Math.random().toString(),
+        text: opt,
+        isCorrect: initialCorrect.includes(opt)
+      }))
+    }
+    return [
+      { id: Math.random().toString(), text: '', isCorrect: false },
+      { id: Math.random().toString(), text: '', isCorrect: false }
+    ]
+  })
+
   return (
     <>
       <div className="grid grid-cols-2 gap-4">
@@ -67,7 +90,30 @@ function QuestionFormFields({ defaultValues }: { defaultValues?: Question }) {
           <select
             name="type"
             value={type}
-            onChange={e => setType(e.target.value)}
+            onChange={e => {
+              const newType = e.target.value;
+              setType(newType);
+              if (newType === 'true_false') {
+                setOptions([
+                  { id: Math.random().toString(), text: 'True', isCorrect: true },
+                  { id: Math.random().toString(), text: 'False', isCorrect: false }
+                ])
+              } else if (type === 'true_false' && newType !== 'true_false') {
+                setOptions([
+                  { id: Math.random().toString(), text: '', isCorrect: false },
+                  { id: Math.random().toString(), text: '', isCorrect: false }
+                ])
+              } else if (newType === 'single' && type === 'multi') {
+                let found = false;
+                setOptions(options.map(o => {
+                  if (o.isCorrect && !found) {
+                    found = true;
+                    return o;
+                  }
+                  return { ...o, isCorrect: false };
+                }));
+              }
+            }}
             className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm"
           >
             {Object.entries(TYPE_LABELS).map(([val, label]) => (
@@ -86,31 +132,64 @@ function QuestionFormFields({ defaultValues }: { defaultValues?: Question }) {
         <p className="text-xs text-text-muted italic px-1">{hint}</p>
       )}
 
-      {(type === 'single' || type === 'multi') && (
-        <>
-          <div>
-            <label className="block text-sm font-medium text-text-muted mb-1">Options (comma separated)</label>
-            <input name="options" required defaultValue={parseArray(defaultValues?.options).join(', ')} className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" placeholder="A, B, C, D" />
+      {(type === 'single' || type === 'multi' || type === 'true_false') && (
+        <div className="space-y-3 bg-surface-soft p-4 rounded-xl border border-line">
+          <label className="block text-sm font-medium text-text-muted">
+            {type === 'true_false' ? 'True / False Options' : 'Options'}
+          </label>
+          <div className="space-y-2">
+            {options.map((opt, i) => (
+              <div key={opt.id} className="flex items-center gap-2">
+                <input 
+                  type="text"
+                  value={opt.text}
+                  onChange={e => setOptions(options.map(o => o.id === opt.id ? { ...o, text: e.target.value } : o))}
+                  className="flex-1 h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm disabled:opacity-70 disabled:cursor-not-allowed"
+                  placeholder={`Option ${i + 1}`}
+                  required
+                  disabled={type === 'true_false'}
+                />
+                <label className="flex items-center gap-1.5 px-3 h-10 rounded-md border bg-white cursor-pointer hover:bg-surface transition shadow-sm">
+                  <input 
+                    type={type === 'multi' ? 'checkbox' : 'radio'}
+                    name={defaultValues?.id ? `correct_${type}_${defaultValues.id}` : `correct_${type}_new`}
+                    checked={opt.isCorrect}
+                    onChange={(e) => {
+                      if (type === 'single' || type === 'true_false') {
+                        setOptions(options.map(o => ({ ...o, isCorrect: o.id === opt.id })))
+                      } else {
+                        setOptions(options.map(o => o.id === opt.id ? { ...o, isCorrect: e.target.checked } : o))
+                      }
+                    }}
+                    className="accent-accent w-4 h-4"
+                  />
+                  <span className="text-xs font-semibold text-text-muted">Correct</span>
+                </label>
+                {type !== 'true_false' && options.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setOptions(options.filter(o => o.id !== opt.id))}
+                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-md transition border border-transparent hover:border-rose-200 bg-white shadow-sm"
+                    title="Remove Option"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
-          <div>
-            <label className="block text-sm font-medium text-text-muted mb-1">Correct Options (comma separated)</label>
-            <input name="correct_options" required defaultValue={parseArray(defaultValues?.correct_options).join(', ')} className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" placeholder="A, C" />
-          </div>
-        </>
-      )}
+          {type !== 'true_false' && (
+            <button
+              type="button"
+              onClick={() => setOptions([...options, { id: Math.random().toString(), text: '', isCorrect: false }])}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:text-accent-strong transition mt-2 bg-white px-3 py-1.5 rounded-lg border border-line shadow-sm hover:border-accent/40"
+            >
+              <Plus size={14} /> Add Option
+            </button>
+          )}
 
-      {type === 'true_false' && (
-        <div>
-          <input type="hidden" name="options" value="True, False" />
-          <label className="block text-sm font-medium text-text-muted mb-1">Correct Answer</label>
-          <select
-            name="correct_options"
-            defaultValue={parseArray(defaultValues?.correct_options)[0] || 'True'}
-            className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2 text-sm font-medium"
-          >
-            <option value="True">True</option>
-            <option value="False">False</option>
-          </select>
+          <input type="hidden" name="options" value={options.map(o => o.text).join('|||')} />
+          <input type="hidden" name="correct_options" value={options.filter(o => o.isCorrect).map(o => o.text).join('|||')} />
         </div>
       )}
 
