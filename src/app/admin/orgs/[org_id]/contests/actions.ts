@@ -8,12 +8,18 @@ export async function createContestAction(orgId: string, formData: FormData) {
   const { data: { user } } = await sb.auth.getUser()
   if (!user) return { error: 'Not logged in' }
 
+  let start_at = formData.get('start_at') as string | null
+  let end_at = formData.get('end_at') as string | null
+
+  if (start_at && !start_at.includes('+') && !start_at.includes('Z')) start_at += '+05:30'
+  if (end_at && !end_at.includes('+') && !end_at.includes('Z')) end_at += '+05:30'
+
   const { error } = await sb.from('contests').insert({
     org_id: orgId,
     title: formData.get('title'),
     duration_minutes: Number(formData.get('duration_minutes')),
-    start_at: formData.get('start_at') || null,
-    end_at: formData.get('end_at') || null,
+    start_at: start_at || null,
+    end_at: end_at || null,
     status: 'draft'
   })
 

@@ -103,12 +103,18 @@ export async function gradeExamAnswer(formData: FormData) {
 
 export async function updateExamSettings(examId: string, orgId: string, formData: FormData) {
   const s = await createClient()
+  let start_at = formData.get('start_at') as string | null
+  let end_at = formData.get('end_at') as string | null
+
+  if (start_at && !start_at.includes('+') && !start_at.includes('Z')) start_at += '+05:30'
+  if (end_at && !end_at.includes('+') && !end_at.includes('Z')) end_at += '+05:30'
+
   await s.from('exams').update({
     title: formData.get('title'),
     description: formData.get('description'),
     duration_minutes: Number(formData.get('duration_minutes')),
-    start_at: formData.get('start_at') || null,
-    end_at: formData.get('end_at') || null,
+    start_at: start_at || null,
+    end_at: end_at || null,
     negative_marking: formData.get('negative_marking') === 'on',
     randomize: formData.get('randomize') === 'on',
   }).eq('id', examId)
