@@ -20,11 +20,13 @@ export function Sidebar({
   role,
   navItems,
   handleSignOut,
+  orgName,
 }: {
   title: string
   role: string
   navItems: NavItem[]
   handleSignOut?: () => Promise<void>
+  orgName?: string
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -87,7 +89,14 @@ export function Sidebar({
           </div>
         </div>
 
-        <nav className="mt-6 space-y-1.5">
+        {orgName && (
+          <div className="mt-6 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Current Classroom</p>
+            <p className="truncate text-sm font-semibold text-accent mt-0.5" title={orgName}>{orgName}</p>
+          </div>
+        )}
+
+        <nav className={`space-y-1.5 ${orgName ? 'mt-4' : 'mt-6'}`}>
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = item.exact 

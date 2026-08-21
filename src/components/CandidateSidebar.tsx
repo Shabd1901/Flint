@@ -1,12 +1,29 @@
 'use client'
+import { useEffect, useState } from 'react'
 import { LayoutDashboard, Code, BookOpen, Terminal, ArrowLeft } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { usePathname } from 'next/navigation'
+import { createClient } from '@/utils/supabase/client'
 
 export function CandidateSidebar({ signOutAction }: { signOutAction: () => Promise<void> }) {
   const pathname = usePathname()
   const match = pathname.match(/^\/candidate\/orgs\/([^/]+)/)
   const orgId = match ? match[1] : null
+
+  const [orgName, setOrgName] = useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    if (orgId) {
+      const fetchOrg = async () => {
+        const supabase = createClient()
+        const { data } = await supabase.from('orgs').select('name').eq('id', orgId).single()
+        if (data) setOrgName(data.name)
+      }
+      fetchOrg()
+    } else {
+      setOrgName(undefined)
+    }
+  }, [orgId])
 
   let navItems = []
 
@@ -29,6 +46,7 @@ export function CandidateSidebar({ signOutAction }: { signOutAction: () => Promi
       role="Candidate"
       navItems={navItems}
       handleSignOut={signOutAction}
+      orgName={orgName}
     />
   )
 }
