@@ -27,7 +27,16 @@ export function ExamSettingsEditor({ exam, orgId }: { exam: Exam, orgId: string 
   const [isOpen, setIsOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
 
-  function handleSubmit(formData: FormData) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    
+    // Convert local datetime to UTC ISO string
+    const startAt = formData.get('start_at') as string
+    const endAt = formData.get('end_at') as string
+    if (startAt) formData.set('start_at', new Date(startAt).toISOString())
+    if (endAt) formData.set('end_at', new Date(endAt).toISOString())
+
     startTransition(async () => {
       await updateExamSettings(exam.id, orgId, formData)
       setIsOpen(false)
@@ -48,7 +57,7 @@ export function ExamSettingsEditor({ exam, orgId }: { exam: Exam, orgId: string 
       </button>
 
       {isOpen && (
-        <form action={handleSubmit} className="p-5 pt-2 space-y-4 border-t">
+        <form onSubmit={handleSubmit} className="p-5 pt-2 space-y-4 border-t">
           <div>
             <label className="block text-sm font-medium text-text-muted mb-1">Title</label>
             <input name="title" required defaultValue={exam.title} className="w-full h-10 rounded-md border bg-white px-3 outline-none ring-accent focus:ring-2" />

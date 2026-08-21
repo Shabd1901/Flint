@@ -26,6 +26,7 @@ export default async function CandidateExams({ params }: { params: Promise<{ org
     const { data: { user } } = await s.auth.getUser()
     
     const examId = formData.get('exam_id') as string
+    const actionOrgId = formData.get('org_id') as string
 
     // Validate start_at & end_at window
     const { data: ex } = await s.from('exams').select('start_at, end_at, status').eq('id', examId).single()
@@ -48,7 +49,7 @@ export default async function CandidateExams({ params }: { params: Promise<{ org
     }
 
     if (attempt) {
-      redirect(`/candidate/orgs/${org_id}/exams/${examId}/take`)
+      redirect(`/candidate/orgs/${actionOrgId}/exams/${examId}/take`)
     }
   }
 
@@ -114,11 +115,12 @@ export default async function CandidateExams({ params }: { params: Promise<{ org
                     </div>
                   ) : (exam.start_at && new Date() < new Date(exam.start_at)) ? (
                     <div className="w-full text-center py-2 bg-surface-soft rounded-lg text-sm font-medium text-text-muted">
-                      Starts: {new Date(exam.start_at).toLocaleString()}
+                      Starts: {new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' }).format(new Date(exam.start_at))}
                     </div>
                   ) : (
                     <form action={startExam}>
                       <input type="hidden" name="exam_id" value={exam.id} />
+                      <input type="hidden" name="org_id" value={org_id} />
                       <button className="w-full rounded-md bg-accent px-4 py-2 text-sm font-semibold text-white hover:bg-accent-strong transition">
                         Start Exam
                       </button>

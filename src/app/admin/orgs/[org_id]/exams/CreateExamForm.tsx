@@ -9,7 +9,16 @@ export function CreateExamForm({ orgId }: { orgId: string }) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
 
-  function handleSubmit(formData: FormData) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    
+    // Convert local datetime to UTC ISO string to prevent timezone bugs
+    const startAt = formData.get('start_at') as string
+    const endAt = formData.get('end_at') as string
+    if (startAt) formData.set('start_at', new Date(startAt).toISOString())
+    if (endAt) formData.set('end_at', new Date(endAt).toISOString())
+
     startTransition(async () => {
       const res = await createExam(formData)
       if (res?.error) {
@@ -22,7 +31,7 @@ export function CreateExamForm({ orgId }: { orgId: string }) {
   }
 
   return (
-    <form action={handleSubmit} className="surface-card p-5 space-y-4 sticky top-8">
+    <form onSubmit={handleSubmit} className="surface-card p-5 space-y-4 sticky top-8">
       <input type="hidden" name="org_id" value={orgId} />
       <h2 className="text-lg font-semibold mb-4">Create New Exam</h2>
       

@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { redirect } from 'next/navigation'
 import { createOrg } from './actions'
 import { AdminOrgCard } from './AdminOrgCard'
@@ -57,8 +58,9 @@ export default async function AdminOrgs() {
       o.org_admins = coAdmins
     })
 
-    // Fetch profiles
-    const { data: profiles } = await supabase.from('profiles').select('id, name, email').in('id', Array.from(adminIds))
+    // Fetch profiles (Requires admin client to bypass RLS which restricts reading other users' profiles)
+    const adminSupabase = createAdminClient()
+    const { data: profiles } = await adminSupabase.from('profiles').select('id, name, email').in('id', Array.from(adminIds))
     const profileMap = new Map(profiles?.map(p => [p.id, p]))
 
     finalOrgs = finalOrgs.map(o => ({
